@@ -10,7 +10,7 @@ const float pulseFactor = 2.4 / 3.6; // Conversion factor: 2.4 km/h = 0.667 m/s 
 int lastPinState = LOW;              // Track the previous state of the input pin
 
 void setup() {
-  pinMode(inputPin, INPUT);          // Setting pin D5 as input
+  pinMode(inputPin, INPUT_PULLUP);          // Setting pin D5 as input
   pinMode(ledPin, OUTPUT);           // Setting pin D13 as output for LED
   pinMode(extraPin, OUTPUT);         // Setting pin D6 as output
   digitalWrite(extraPin, LOW);       // Ensure pin D6 is set to LOW
@@ -28,8 +28,6 @@ void loop() {
   // Check if we detect a rising edge (transition from LOW to HIGH)
   if (currentPinState == HIGH && lastPinState == LOW) {
     pulseCount++;  // Increment the pulse counter ONLY on rising edge
-    
-    Serial.println("Pulse detected");
   }
   
   // Update the last state for the next comparison
@@ -63,7 +61,10 @@ void loop() {
 
     // Round the wind speed to an integer for binary encoding
     int windSpeedInt = round(windSpeed);
-    
+    Serial.print("Setting windspeed on output ");
+    Serial.print(windSpeedInt);
+    Serial.println(" m/s");
+
     // Encode wind speed into binary format on output pins
     for (int i = 0; i < numPins; i++) {
       digitalWrite(outputPins[i], (windSpeedInt >> i) & 1);  // Setting each bit
