@@ -6,7 +6,7 @@ const int extraPin = 6;              // Extra digital output pin (always set to 
 unsigned long lastTime = 0;          // For storing the last time state changed
 volatile int pulseCount = 0;                  // Pulse counter for wind speed measurement
 volatile unsigned long lastInterruptTime = 0;
-const float pulseFactor = 2.4 / 3.6; // Conversion factor: 2.4 km/h = 0.667 m/s per pulse
+const float pulseFactor = 2.4; // Conversion factor: 2.4 km/h per pulse
 
 void setup() {
   pinMode(inputPin, INPUT_PULLUP);          // Setting pin D5 as input
@@ -53,12 +53,9 @@ void loop() {
     // Print wind speed to serial monitor
     Serial.print("Wind speed: ");
     Serial.print(windSpeed);
-    Serial.print(" m/s, ");
-    Serial.print(windSpeed * 3.6);
-    Serial.println(" km/h");
+    Serial.print(" km/h, ");
     
-    lastTime = currentMillis;        // Time update
-    
+    lastTime = currentMillis;        // Time update    
 
     // Round the wind speed to an integer for binary encoding
     int windSpeedInt = round(windSpeed);
@@ -68,7 +65,7 @@ void loop() {
     }
     Serial.print("Setting windspeed on output ");
     Serial.print(windSpeedInt);
-    Serial.println(" m/s");
+    Serial.println(" km/h");
     
     // Encode wind speed into binary format on output pins    
     for (int i = 0; i < numPins; i++) {
