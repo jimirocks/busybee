@@ -33,9 +33,9 @@ void countPulse() {
 }
 
 void loop() {    
-  // Calculate and output wind speed every 5 seconds
+  // Calculate and output wind speed every 1 second
   unsigned long currentMillis = millis();
-  if (currentMillis - lastTime >= 5000) {
+  if (currentMillis - lastTime >= 1000) {
     // Calculate wind speed in m/s
     float elapsedSeconds = (currentMillis - lastTime) / 1000.0;
     
@@ -76,7 +76,7 @@ void loop() {
     // set mode to wind speed
     digitalWrite(modePin, LOW);
 
-    delay(500);
+    delay(200);
 
     // measure wind direction
     int raw = analogRead(directionInputPin);
@@ -112,13 +112,5 @@ void loop() {
     }
     // set mode to wind direction
     digitalWrite(modePin, HIGH);
-
-    // Blink LED twice
-    for (int i = 0; i < 2; i++) {
-      digitalWrite(ledPin, HIGH);   // Turn on LED
-      delay(100);                   // Pause for 100 ms
-      digitalWrite(ledPin, LOW);    // Turn off LED
-      delay(100);                   // Pause for 100 ms
-    }    
   }
 }
