@@ -1,0 +1,38 @@
+calendars:
+  - id: personal
+    type: google
+    calendarId: primary
+    tokenFile: tokens/personal.json
+    
+  - id: work1
+    type: google
+    calendarId: work1@group.calendar.google.com
+    tokenFile: tokens/work1.json
+    
+  - id: work2
+    type: google
+    calendarId: work2@group.calendar.google.com
+    tokenFile: tokens/work2.json
+    
+  - id: infomaniak
+    type: caldav
+    url: https://infomaniak.com/caldav/user/calendar
+    username: user@example.com
+    password: app-password
+    tokenFile: tokens/infomaniak.json
+
+sync:
+  intervalMinutes: 15
+  prefix: "[SYNC]"
+  
+logging:
+  level: INFO
+  
+alerts:
+  enabled: true
+  email:
+    host: smtp.gmail.com
+    port: 587
+    username: alert@example.com
+    password: smtp-password
+    to: user@example.com

@@ -1,0 +1,6 @@
+.gradle/
+build/
+calsync.jar
+tokens/
+*.iml
+.idea/

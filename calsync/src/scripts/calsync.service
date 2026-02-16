@@ -1,0 +1,15 @@
+[Unit]
+Description=CalSync - Universal Calendar Sync Engine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jimi
+WorkingDirectory=/home/jimi/devP/home/calsync
+ExecStart=/home/jimi/devP/home/calsync/scripts/calsync.sh
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

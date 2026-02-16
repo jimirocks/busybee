@@ -1,0 +1,58 @@
+package rocks.jimi.calsync.config
+
+import org.yaml.snakeyaml.Yaml
+import java.io.File
+
+object ConfigLoader {
+    fun load(path: String = "config.yaml"): Config {
+        val yaml = Yaml()
+        val input = File(path).readText()
+        val map = yaml.load<Map<String, Any>>(input)
+        
+        val calendars = (map["calendars"] as List<Map<String, Any>>).map { c ->
+            CalendarConfig(
+                id = c["id"] as String,
+                type = c["type"] as String,
+                calendarId = c["calendarId"] as? String,
+                url = c["url"] as? String,
+                username = c["username"] as? String,
+                password = c["password"] as? String,
+                tokenFile = c["tokenFile"] as String
+            )
+        }
+        
+        val syncMap = map["sync"] as Map<String, Any>
+        val sync = SyncConfig(
+            intervalMinutes = (syncMap["intervalMinutes"] as? Int) ?: 15,
+            prefix = (syncMap["prefix"] as? String) ?: "[SYNC]"
+        )
+        
+        var alerts: AlertConfig? = null
+        map["alerts"]?.let { a ->
+            val alertMap = a as Map<String, Any>
+            val emailMap = alertMap["email"] as? Map<String, Any>
+            alerts = AlertConfig(
+                enabled = (alertMap["enabled"] as? Boolean) ?: false,
+                email = emailMap?.let {
+                    EmailAlertConfig(
+                        host = it["host"] as String,
+                        port = (it["port"] as Number).toInt(),
+                        username = it["username"] as String,
+                        password = it["password"] as String,
+                        to = it["to"] as String
+                    )
+                }
+            )
+        }
+        
+        var logging: LoggingConfig? = null
+        map["logging"]?.let { l ->
+            val logMap = l as Map<String, Any>
+            logging = LoggingConfig(
+                level = (logMap["level"] as? String) ?: "INFO"
+            )
+        }
+        
+        return Config(calendars, sync, logging, alerts)
+    }
+}
