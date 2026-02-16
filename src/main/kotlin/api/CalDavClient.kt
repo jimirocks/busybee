@@ -2,7 +2,7 @@ package rocks.jimi.calsync.api
 
 import rocks.jimi.calsync.config.CalendarConfig
 import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -10,7 +10,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 class CalDavClient(private val config: CalendarConfig) {
-    private val client = HttpClient(OkHttp)
+    private val client = HttpClient(CIO)
     private val baseUrl = config.url ?: throw IllegalArgumentException("CalDAV URL required")
     private val user = config.username ?: throw IllegalArgumentException("CalDAV username required")
     private val pass = config.password ?: throw IllegalArgumentException("CalDAV password required")
