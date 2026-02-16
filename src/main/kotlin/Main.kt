@@ -11,7 +11,38 @@ fun main(args: Array<String>) {
     when {
         args.firstOrNull() == "run" -> runDaemon()
         args.firstOrNull() == "sync" -> runOnce()
-        args.firstOrNull() == "token" -> fetchToken(args.getOrNull(1) ?: "google")
+        args.firstOrNull() == "token" -> {
+            println("""
+CalSync Token Setup Instructions
+================================
+
+For Google Calendar OAuth tokens:
+
+1. Go to Google Cloud Console: https://console.cloud.google.com/apis/credentials
+2. Create OAuth 2.0 Client ID credentials (Desktop app)
+3. Use the OAuth 2.0 Playground: https://developers.google.com/oauthplayground/
+   - Click Settings (gear icon) > Use your own OAuth credentials
+   - Enter your Client ID and Client Secret
+   - Click Authorize APIs > Sign in with your Google account
+   - Exchange authorization code for tokens
+   - Copy the refresh_token from the response
+
+4. Create token file at tokens/<calendar-id>.json:
+   {
+     "refreshToken": "YOUR_REFRESH_TOKEN",
+     "clientId": "YOUR_CLIENT_ID", 
+     "clientSecret": "YOUR_CLIENT_SECRET"
+   }
+
+For CalDAV:
+   - Use your provider's app-specific password
+   - Store in config.yaml directly or reference in tokenFile
+
+For multiple Google accounts:
+   - Create separate token files for each (personal.json, work1.json, etc.)
+   - Each needs its own OAuth setup through the playground
+            """.trimIndent())
+        }
         else -> printUsage()
     }
 }
@@ -64,15 +95,6 @@ private fun runDaemon() {
     } catch (e: InterruptedException) {
         println("Daemon stopped.")
     }
-}
-
-private fun fetchToken(type: String) {
-    println("Token fetching for $type:")
-    println("1. Go to Google Cloud Console > APIs > Credentials")
-    println("2. Create OAuth 2.0 Client ID")
-    println("3. Download the JSON file")
-    println("4. Place it at the path specified in config.yaml (e.g., tokens/personal.json)")
-    println("\nFor CalDAV, use your app-specific password from your provider settings.")
 }
 
 private fun printUsage() {

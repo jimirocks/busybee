@@ -1,7 +1,9 @@
 package rocks.jimi.calsync.sync
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import rocks.jimi.calsync.api.GoogleCalendarClient
 import rocks.jimi.calsync.api.CalDavClient
+import rocks.jimi.calsync.api.TokenManager
 import rocks.jimi.calsync.config.CalendarConfig
 import rocks.jimi.calsync.CalendarEvent
 import rocks.jimi.calsync.config.Config
@@ -16,13 +18,20 @@ import java.util.UUID
 class SyncEngine(private val config: Config) {
     private val prefix = config.sync.prefix
     private val clients = config.calendars.associate { it.id to createClient(it) }
+    private val tokenManagers = config.calendars
+        .filter { it.type == "google" }
+        .associate { it.id to TokenManager(it) }
     private val stateFile = "sync-state.json"
     private val state: MutableMap<String, SyncState> = loadState()
     private val json = Json { prettyPrint = true }
     
     private fun createClient(cfg: CalendarConfig): Any {
         return when (cfg.type) {
-            "google" -> GoogleCalendarClient(cfg)
+            "google" -> {
+                val tokenManager = tokenManagers[cfg.id] 
+                    ?: throw IllegalStateException("No token manager for ${cfg.id}")
+                GoogleCalendarClient(cfg, tokenManager)
+            }
             "caldav" -> CalDavClient(cfg)
             else -> throw IllegalArgumentException("Unknown calendar type: ${cfg.type}")
         }
@@ -57,7 +66,7 @@ class SyncEngine(private val config: Config) {
     private suspend fun fetchEvents(cfg: CalendarConfig, timeMin: ZonedDateTime, timeMax: ZonedDateTime): List<CalendarEvent> {
         val client = clients[cfg.id]!!
         val events = when (client) {
-            is GoogleCalendarClient -> client.listEvents(timeMin, timeMax).map { e ->
+            is GoogleCalendarClient -> safeGoogleCall { client.listEvents(timeMin, timeMax) }.map { e ->
                 CalendarEvent(
                     id = e.id,
                     summary = e.summary,
@@ -86,6 +95,21 @@ class SyncEngine(private val config: Config) {
         return events
     }
     
+    private fun <T> safeGoogleCall(block: () -> T): T {
+        return try {
+            block()
+        } catch (e: GoogleJsonResponseException) {
+            if (e.statusCode == 401) {
+                tokenManagers.entries.find { (clients[it.key] as? GoogleCalendarClient) != null }?.let { (_, tm) ->
+                    tm.refreshToken()
+                }
+                block()
+            } else {
+                throw e
+            }
+        }
+    }
+    
     private suspend fun syncCalendar(sourceCalId: String, allEvents: MutableMap<String, MutableList<CalendarEvent>>) {
         val sourceEvents = allEvents[sourceCalId] ?: return
         val originalEvents = sourceEvents.filter { it.isOriginal }
@@ -97,7 +121,6 @@ class SyncEngine(private val config: Config) {
                 if (targetCal.id == sourceCalId) continue
                 
                 val targetKey = "${targetCal.id}_$syncId"
-                state[targetKey]
                 val targetEvents = allEvents[targetCal.id] ?: continue
                 val existingTargetEvent = targetEvents.find { it.syncId == syncId }
                 
@@ -106,7 +129,7 @@ class SyncEngine(private val config: Config) {
                         if (existingTargetEvent.summary != "$prefix ${original.summary}" ||
                             existingTargetEvent.start != original.start ||
                             existingTargetEvent.end != original.end) {
-                            updateSyncEvent(targetCal.id, existingTargetEvent.id, original, syncId)
+                            updateSyncEvent(targetCal.id, existingTargetEvent.id, original)
                         }
                     }
                     else -> {
@@ -125,11 +148,9 @@ class SyncEngine(private val config: Config) {
     ) {
         val client = clients[targetCalId]!!
         val newEventId = when (client) {
-            is GoogleCalendarClient -> client.createEvent(
-                "$prefix ${original.summary}",
-                original.start,
-                original.end
-            )
+            is GoogleCalendarClient -> safeGoogleCall {
+                client.createEvent("$prefix ${original.summary}", original.start, original.end)
+            }
             is CalDavClient -> client.createEvent(
                 UUID.randomUUID().toString(),
                 "$prefix ${original.summary}",
@@ -162,20 +183,12 @@ class SyncEngine(private val config: Config) {
         )
     }
     
-    private suspend fun updateSyncEvent(
-        targetCalId: String,
-        eventId: String,
-        original: CalendarEvent,
-        syncId: String
-    ) {
+    private suspend fun updateSyncEvent(targetCalId: String, eventId: String, original: CalendarEvent) {
         val client = clients[targetCalId]!!
         when (client) {
-            is GoogleCalendarClient -> client.updateEvent(
-                eventId,
-                "$prefix ${original.summary}",
-                original.start,
-                original.end
-            )
+            is GoogleCalendarClient -> safeGoogleCall {
+                client.updateEvent(eventId, "$prefix ${original.summary}", original.start, original.end)
+            }
             is CalDavClient -> client.updateEvent(
                 eventId,
                 "$prefix ${original.summary}",
@@ -193,9 +206,9 @@ class SyncEngine(private val config: Config) {
             val sourceExists = sourceEvents.any { it.id == syncState.sourceEventId && it.isOriginal }
             
             if (!sourceExists) {
-                val client = clients[syncState.targetCalendarId] ?: continue
+                val client = clients[syncState.targetCalendarId]
                 when (client) {
-                    is GoogleCalendarClient -> client.deleteEvent(syncState.targetEventId)
+                    is GoogleCalendarClient -> safeGoogleCall { client.deleteEvent(syncState.targetEventId) }
                     is CalDavClient -> client.deleteEvent(syncState.targetEventId)
                 }
                 toRemove.add(key)

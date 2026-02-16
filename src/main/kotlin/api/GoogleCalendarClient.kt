@@ -1,32 +1,39 @@
 package rocks.jimi.calsync.api
 
-import rocks.jimi.calsync.config.CalendarConfig
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.calendar.Calendar
 import com.google.api.services.calendar.CalendarScopes
+import com.google.auth.oauth2.UserCredentials
+import rocks.jimi.calsync.config.CalendarConfig
 import java.io.File
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-class GoogleCalendarClient(private val config: CalendarConfig) {
-    private val service: Calendar
+class GoogleCalendarClient(
+    private val config: CalendarConfig,
+    private val tokenManager: TokenManager
+) {
+    private val httpTransport = NetHttpTransport()
+    private val jsonFactory = GsonFactory.getDefaultInstance()
+    private val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
     
-    init {
-        val httpTransport = NetHttpTransport()
-        val jsonFactory = GsonFactory.getDefaultInstance()
-        
-        val credential = GoogleCredential.fromStream(File(config.tokenFile).inputStream())
-            .createScoped(setOf(CalendarScopes.CALENDAR))
-        
-        service = Calendar.Builder(httpTransport, jsonFactory, credential)
+    @Volatile
+    private var service: Calendar = createService()
+    
+    private fun createService(): Calendar {
+        val credentials = tokenManager.getCredentials()
+        return Calendar.Builder(httpTransport, jsonFactory, credentials as com.google.api.client.http.HttpRequestInitializer)
             .setApplicationName("CalSync")
             .build()
     }
     
+    fun refreshService() {
+        tokenManager.refreshToken()
+        service = createService()
+    }
+    
     fun listEvents(timeMin: ZonedDateTime, timeMax: ZonedDateTime): List<GoogleEvent> {
-        val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
         val events = service.events().list(config.calendarId)
             .setTimeMin(com.google.api.client.util.DateTime(timeMin.format(formatter)))
             .setTimeMax(com.google.api.client.util.DateTime(timeMax.format(formatter)))
@@ -44,7 +51,6 @@ class GoogleCalendarClient(private val config: CalendarConfig) {
     }
     
     fun createEvent(summary: String, start: ZonedDateTime, end: ZonedDateTime): String {
-        val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
         val event = com.google.api.services.calendar.model.Event().apply {
             this.summary = summary
             this.description = "Synced by CalSync"
@@ -59,7 +65,6 @@ class GoogleCalendarClient(private val config: CalendarConfig) {
     }
     
     fun updateEvent(eventId: String, summary: String, start: ZonedDateTime, end: ZonedDateTime) {
-        val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
         val event = service.events().get(config.calendarId, eventId).execute()
         event.summary = summary
         event.start = com.google.api.services.calendar.model.EventDateTime()
