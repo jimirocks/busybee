@@ -9,7 +9,7 @@ object ConfigLoader {
         val input = File(path).readText()
         val map = yaml.load<Map<String, Any>>(input)
         
-        val calendars = (map["calendars"] as List<Map<String, Any>>).map { c ->
+        val calendars = (map["calendars"] as? List<Map<String, Any>>)?.map { c ->
             CalendarConfig(
                 id = c["id"] as String,
                 type = c["type"] as String,
@@ -17,15 +17,23 @@ object ConfigLoader {
                 url = c["url"] as? String,
                 username = c["username"] as? String,
                 password = c["password"] as? String,
-                tokenFile = c["tokenFile"] as String
+                tokenFile = c["tokenFile"] as? String ?: ""
+            )
+        } ?: emptyList()
+        
+        val sync = (map["sync"] as? Map<String, Any>)?.let { syncMap ->
+            SyncConfig(
+                intervalMinutes = (syncMap["intervalMinutes"] as? Int) ?: 15,
+                prefix = (syncMap["prefix"] as? String) ?: "[SYNC]"
+            )
+        } ?: SyncConfig()
+        
+        val oauth = (map["oauth"] as? Map<String, Any>)?.let { oauthMap ->
+            OAuthConfig(
+                clientId = oauthMap["clientId"] as String,
+                clientSecret = oauthMap["clientSecret"] as String
             )
         }
-        
-        val syncMap = map["sync"] as Map<String, Any>
-        val sync = SyncConfig(
-            intervalMinutes = (syncMap["intervalMinutes"] as? Int) ?: 15,
-            prefix = (syncMap["prefix"] as? String) ?: "[SYNC]"
-        )
         
         var alerts: AlertConfig? = null
         map["alerts"]?.let { a ->
@@ -53,6 +61,6 @@ object ConfigLoader {
             )
         }
         
-        return Config(calendars, sync, logging, alerts)
+        return Config(calendars, sync, oauth, logging, alerts)
     }
 }

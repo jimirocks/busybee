@@ -28,6 +28,8 @@ dependencies {
     
     implementation("org.yaml:snakeyaml:2.2")
     
+    implementation("com.github.ajalt.clikt:clikt:5.1.0")
+    
     testImplementation(kotlin("test"))
 }
 
@@ -47,6 +49,6 @@ tasks.register<Jar>("fatJar") {
         configurations.runtimeClasspath.get().map { zipTree(it) }
     })
     manifest {
-        attributes["Main-Class"] = "rocks.jimi.calsync.MainKt"
+        attributes["Main-Class"] = "rocks.jimi.calsync.cli.MainKt"
     }
 }

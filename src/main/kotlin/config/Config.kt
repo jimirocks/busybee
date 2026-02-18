@@ -10,15 +10,22 @@ data class CalendarConfig(
     val url: String? = null,
     val username: String? = null,
     val password: String? = null,
-    val tokenFile: String
+    val tokenFile: String = ""
 )
 
 @Serializable
 data class Config(
-    val calendars: List<CalendarConfig>,
-    val sync: SyncConfig,
+    val calendars: List<CalendarConfig> = emptyList(),
+    val sync: SyncConfig = SyncConfig(),
+    val oauth: OAuthConfig? = null,
     val logging: LoggingConfig? = null,
     val alerts: AlertConfig? = null
+)
+
+@Serializable
+data class OAuthConfig(
+    val clientId: String,
+    val clientSecret: String
 )
 
 @Serializable
