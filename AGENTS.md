@@ -119,11 +119,30 @@ data class CalendarConfig(
 - Use kotlinx.serialization for YAML parsing (preferred over SnakeYAML)
 - Never commit secrets (OAuth tokens, credentials) to version control
 
+### Time and DateTime APIs
+
+**CRITICAL: This project uses specific time libraries to avoid conflicts:**
+
+1. **Default: Use `kotlin.time` from Kotlin stdlib**
+   - Classes: `Instant`, `Clock`, `Duration`
+   - Used throughout: `Event.kt`, `GoogleCalendarClient.kt`, `SyncEngine.kt`
+
+2. **For timezone-aware datetime (CalDAV parsing): Use `kotlinx-datetime`**
+   - Classes: `LocalDateTime`, `TimeZone`
+   - Convert to `kotlin.time.Instant` using `.toInstant(timeZone: TimeZone)`
+
+3. **NEVER use `java.time`**
+   - Causes import ambiguity with `kotlin.time.Instant`
+
+4. **iCalendar output format**
+   - When writing CalDAV events, format datetime as: `YYYYMMDDTHHMMSSZ` (no colons, no decimals)
+
 ## Key Dependencies
 
 - Kotlin 2.3.10, Ktor Client 3.4.0, kotlinx.serialization 1.10.0
-- kotlinx.coroutines 1.10.2, Google API Client 2.2.0, Google Calendar API v3-rev20231123-2.0.0
-- Google Auth Library 1.20.0, JavaMail 1.6.2, Clikt 5.1.0, SLF4J Simple 2.0.9
+- kotlinx.coroutines 1.10.2, kotlinx-datetime 0.7.0, Google API Client 2.2.0, Google Calendar API v3-rev20231123-2.0.0
+- Google Auth Library 1.20.0, JavaMail 1.6.2, Clikt 5.1.0
+- kotlin-logging-jvm 7.0.14, SLF4J Simple 2.0.9
 
 ## Gitignore Patterns
 
