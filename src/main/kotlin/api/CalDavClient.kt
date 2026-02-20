@@ -35,7 +35,7 @@ class CalDavClient(private val config: CalendarConfig) {
         return parseCalDavResponse(response.bodyAsText(), timeMin, timeMax)
     }
     
-    suspend fun createEvent(uid: String, summary: String, start: Instant, end: Instant): String {
+    suspend fun createEvent(uid: String, summary: String, description: String?, start: Instant, end: Instant): String {
         val ics = """BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//CalSync//EN
@@ -43,7 +43,7 @@ BEGIN:VEVENT
 UID:$uid
 DTSTAMP:${Clock.System.now().toString()}
 SUMMARY:$summary
-DESCRIPTION:Synced by CalSync
+DESCRIPTION:$description
 DTSTART:${start.toString()}
 DTEND:${end.toString()}
 END:VEVENT
@@ -59,7 +59,7 @@ END:VCALENDAR""".trimIndent()
         return uid
     }
     
-    suspend fun updateEvent(eventId: String, summary: String, start: Instant, end: Instant) {
+    suspend fun updateEvent(eventId: String, summary: String, description: String?, start: Instant, end: Instant) {
         val ics = """BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//CalSync//EN
@@ -67,7 +67,7 @@ BEGIN:VEVENT
 UID:$eventId
 DTSTAMP:${Clock.System.now().toString()}
 SUMMARY:$summary
-DESCRIPTION:Synced by CalSync
+DESCRIPTION:$description
 DTSTART:${start.toString()}
 DTEND:${end.toString()}
 END:VEVENT
@@ -92,6 +92,7 @@ END:VCALENDAR""".trimIndent()
         val events = mutableListOf<CalDavEvent>()
         val uidPattern = "UID:([^\\s]+)".toRegex()
         val summaryPattern = "SUMMARY:([^\\r\\n]+)".toRegex()
+        val descriptionPattern = "DESCRIPTION:([^\\r\\n]+)".toRegex()
         val dtstartPattern = "DTSTART[^:]*:([^\\s]+)".toRegex()
         val dtendPattern = "DTEND[^:]*:([^\\s]+)".toRegex()
         
@@ -100,6 +101,7 @@ END:VCALENDAR""".trimIndent()
         for (block in icalBlocks) {
             val uid = uidPattern.find(block)?.groupValues?.get(1) ?: continue
             val summary = summaryPattern.find(block)?.groupValues?.get(1) ?: "Busy"
+            val description = descriptionPattern.find(block)?.groupValues?.get(1)
             val dtstart = dtstartPattern.find(block)?.groupValues?.get(1)
             val dtend = dtendPattern.find(block)?.groupValues?.get(1)
             
@@ -109,7 +111,7 @@ END:VCALENDAR""".trimIndent()
                     val end = Instant.parse(dtend)
                     
                     if (start < timeMax && end > timeMin) {
-                        events.add(CalDavEvent(uid, summary, null, start, end))
+                        events.add(CalDavEvent(uid, summary, description, start, end))
                     }
                 } catch (e: Exception) {
                 }

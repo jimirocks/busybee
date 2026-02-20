@@ -33,23 +33,26 @@ class GoogleCalendarClient(
         val events = service.events().list(config.calendarId)
             .setTimeMin(com.google.api.client.util.DateTime(timeMin.toString()))
             .setTimeMax(com.google.api.client.util.DateTime(timeMax.toString()))
+            .setSingleEvents(true)
             .execute()
         
-        return events.items?.map { e ->
+        return events.items?.mapNotNull { e ->
+            val startTime = e.start.dateTime?.toString() ?: e.start.date?.toString() ?: return@mapNotNull null
+            val endTime = e.end.dateTime?.toString() ?: e.end.date?.toString() ?: return@mapNotNull null
             GoogleEvent(
                 id = e.id,
                 summary = e.summary ?: "Busy",
                 description = e.description,
-                start = Instant.parse(e.start.dateTime.toString()),
-                end = Instant.parse(e.end.dateTime.toString())
+                start = Instant.parse(startTime),
+                end = Instant.parse(endTime)
             )
         } ?: emptyList()
     }
     
-    fun createEvent(summary: String, start: Instant, end: Instant): String {
+    fun createEvent(summary: String, description: String?, start: Instant, end: Instant): String {
         val event = com.google.api.services.calendar.model.Event().apply {
             this.summary = summary
-            this.description = "Synced by CalSync"
+            this.description = description
             this.start = com.google.api.services.calendar.model.EventDateTime()
                 .setDateTime(com.google.api.client.util.DateTime(start.toString()))
             this.end = com.google.api.services.calendar.model.EventDateTime()
@@ -60,9 +63,10 @@ class GoogleCalendarClient(
         return created.id
     }
     
-    fun updateEvent(eventId: String, summary: String, start: Instant, end: Instant) {
+    fun updateEvent(eventId: String, summary: String, description: String?, start: Instant, end: Instant) {
         val event = service.events().get(config.calendarId, eventId).execute()
         event.summary = summary
+        event.description = description
         event.start = com.google.api.services.calendar.model.EventDateTime()
             .setDateTime(com.google.api.client.util.DateTime(start.toString()))
         event.end = com.google.api.services.calendar.model.EventDateTime()
