@@ -3,12 +3,9 @@ package rocks.jimi.calsync.api
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.calendar.Calendar
-import com.google.api.services.calendar.CalendarScopes
-import com.google.auth.oauth2.UserCredentials
+import com.google.auth.http.HttpCredentialsAdapter
 import rocks.jimi.calsync.config.CalendarConfig
-import java.io.File
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
+import kotlin.time.Instant
 
 class GoogleCalendarClient(
     private val config: CalendarConfig,
@@ -16,14 +13,13 @@ class GoogleCalendarClient(
 ) {
     private val httpTransport = NetHttpTransport()
     private val jsonFactory = GsonFactory.getDefaultInstance()
-    private val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
     
     @Volatile
     private var service: Calendar = createService()
     
     private fun createService(): Calendar {
         val credentials = tokenManager.getCredentials()
-        return Calendar.Builder(httpTransport, jsonFactory, credentials as com.google.api.client.http.HttpRequestInitializer)
+        return Calendar.Builder(httpTransport, jsonFactory, HttpCredentialsAdapter(credentials))
             .setApplicationName("CalSync")
             .build()
     }
@@ -33,10 +29,10 @@ class GoogleCalendarClient(
         service = createService()
     }
     
-    fun listEvents(timeMin: ZonedDateTime, timeMax: ZonedDateTime): List<GoogleEvent> {
+    fun listEvents(timeMin: Instant, timeMax: Instant): List<GoogleEvent> {
         val events = service.events().list(config.calendarId)
-            .setTimeMin(com.google.api.client.util.DateTime(timeMin.format(formatter)))
-            .setTimeMax(com.google.api.client.util.DateTime(timeMax.format(formatter)))
+            .setTimeMin(com.google.api.client.util.DateTime(timeMin.toString()))
+            .setTimeMax(com.google.api.client.util.DateTime(timeMax.toString()))
             .execute()
         
         return events.items?.map { e ->
@@ -44,33 +40,33 @@ class GoogleCalendarClient(
                 id = e.id,
                 summary = e.summary ?: "Busy",
                 description = e.description,
-                start = ZonedDateTime.parse(e.start.dateTime.toString()),
-                end = ZonedDateTime.parse(e.end.dateTime.toString())
+                start = Instant.parse(e.start.dateTime.toString()),
+                end = Instant.parse(e.end.dateTime.toString())
             )
         } ?: emptyList()
     }
     
-    fun createEvent(summary: String, start: ZonedDateTime, end: ZonedDateTime): String {
+    fun createEvent(summary: String, start: Instant, end: Instant): String {
         val event = com.google.api.services.calendar.model.Event().apply {
             this.summary = summary
             this.description = "Synced by CalSync"
             this.start = com.google.api.services.calendar.model.EventDateTime()
-                .setDateTime(com.google.api.client.util.DateTime(start.format(formatter)))
+                .setDateTime(com.google.api.client.util.DateTime(start.toString()))
             this.end = com.google.api.services.calendar.model.EventDateTime()
-                .setDateTime(com.google.api.client.util.DateTime(end.format(formatter)))
+                .setDateTime(com.google.api.client.util.DateTime(end.toString()))
         }
         
         val created = service.events().insert(config.calendarId, event).execute()
         return created.id
     }
     
-    fun updateEvent(eventId: String, summary: String, start: ZonedDateTime, end: ZonedDateTime) {
+    fun updateEvent(eventId: String, summary: String, start: Instant, end: Instant) {
         val event = service.events().get(config.calendarId, eventId).execute()
         event.summary = summary
         event.start = com.google.api.services.calendar.model.EventDateTime()
-            .setDateTime(com.google.api.client.util.DateTime(start.format(formatter)))
+            .setDateTime(com.google.api.client.util.DateTime(start.toString()))
         event.end = com.google.api.services.calendar.model.EventDateTime()
-            .setDateTime(com.google.api.client.util.DateTime(end.format(formatter)))
+            .setDateTime(com.google.api.client.util.DateTime(end.toString()))
         
         service.events().update(config.calendarId, eventId, event).execute()
     }
@@ -84,6 +80,6 @@ data class GoogleEvent(
     val id: String,
     val summary: String,
     val description: String?,
-    val start: ZonedDateTime,
-    val end: ZonedDateTime
+    val start: Instant,
+    val end: Instant
 )

@@ -1,26 +1,28 @@
 package rocks.jimi.calsync.sync
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
-import rocks.jimi.calsync.api.GoogleCalendarClient
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import rocks.jimi.calsync.CalendarEvent
+import rocks.jimi.calsync.SyncState
 import rocks.jimi.calsync.api.CalDavClient
+import rocks.jimi.calsync.api.GoogleCalendarClient
 import rocks.jimi.calsync.api.TokenManager
 import rocks.jimi.calsync.config.CalendarConfig
-import rocks.jimi.calsync.CalendarEvent
 import rocks.jimi.calsync.config.Config
-import rocks.jimi.calsync.SyncState
-import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import java.io.File
-import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 class SyncEngine(private val config: Config) {
     private val prefix = config.sync.prefix
-    private val clients = config.calendars.associate { it.id to createClient(it) }
     private val tokenManagers = config.calendars
         .filter { it.type == "google" }
         .associate { it.id to TokenManager(it) }
+    private val clients = config.calendars.associate { it.id to createClient(it) }
     private val stateFile = "sync-state.json"
     private val state: MutableMap<String, SyncState> = loadState()
     private val json = Json { prettyPrint = true }
@@ -44,9 +46,9 @@ class SyncEngine(private val config: Config) {
     }
     
     private suspend fun doSync() {
-        val now = ZonedDateTime.now()
-        val timeMin = now.minusDays(1)
-        val timeMax = now.plusDays(config.sync.intervalMinutes.toLong() + 30)
+        val now = Clock.System.now()
+        val timeMin = now.minus(1.days)
+        val timeMax = now.plus((config.sync.intervalMinutes + 30).minutes)
         
         val allEvents = mutableMapOf<String, MutableList<CalendarEvent>>()
         
@@ -63,7 +65,7 @@ class SyncEngine(private val config: Config) {
         saveState()
     }
     
-    private suspend fun fetchEvents(cfg: CalendarConfig, timeMin: ZonedDateTime, timeMax: ZonedDateTime): List<CalendarEvent> {
+    private suspend fun fetchEvents(cfg: CalendarConfig, timeMin: Instant, timeMax: Instant): List<CalendarEvent> {
         val client = clients[cfg.id]!!
         val events = when (client) {
             is GoogleCalendarClient -> safeGoogleCall { client.listEvents(timeMin, timeMax) }.map { e ->

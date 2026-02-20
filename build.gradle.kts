@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.3.10"
+    kotlin("plugin.serialization") version "2.3.10"
 }
 
 group = "rocks.jimi"
@@ -18,9 +19,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     
-    implementation("com.google.api-client:google-api-client:2.2.0")
-    implementation("com.google.apis:google-api-services-calendar:v3-rev20231123-2.0.0")
-    implementation("com.google.auth:google-auth-library-oauth2-http:1.20.0")
+    implementation("com.google.api-client:google-api-client:2.8.1")
+    implementation("com.google.apis:google-api-services-calendar:v3-rev20251207-2.0.0")
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.42.1")
     
     implementation("com.sun.mail:javax.mail:1.6.2")
     

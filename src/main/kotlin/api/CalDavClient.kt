@@ -6,8 +6,8 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class CalDavClient(private val config: CalendarConfig) {
     private val client = HttpClient(CIO)
@@ -15,9 +15,7 @@ class CalDavClient(private val config: CalendarConfig) {
     private val user = config.username ?: throw IllegalArgumentException("CalDAV username required")
     private val pass = config.password ?: throw IllegalArgumentException("CalDAV password required")
     
-    private val isoFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
-    
-    suspend fun listEvents(timeMin: ZonedDateTime, timeMax: ZonedDateTime): List<CalDavEvent> {
+    suspend fun listEvents(timeMin: Instant, timeMax: Instant): List<CalDavEvent> {
         val propfind = """<?xml version="1.0" encoding="utf-8" ?>
             <D:propfind xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
                 <D:prop>
@@ -37,17 +35,17 @@ class CalDavClient(private val config: CalendarConfig) {
         return parseCalDavResponse(response.bodyAsText(), timeMin, timeMax)
     }
     
-    suspend fun createEvent(uid: String, summary: String, start: ZonedDateTime, end: ZonedDateTime): String {
+    suspend fun createEvent(uid: String, summary: String, start: Instant, end: Instant): String {
         val ics = """BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//CalSync//EN
 BEGIN:VEVENT
 UID:$uid
-DTSTAMP:${ZonedDateTime.now().format(isoFormatter)}
+DTSTAMP:${Clock.System.now().toString()}
 SUMMARY:$summary
 DESCRIPTION:Synced by CalSync
-DTSTART:${start.format(isoFormatter)}
-DTEND:${end.format(isoFormatter)}
+DTSTART:${start.toString()}
+DTEND:${end.toString()}
 END:VEVENT
 END:VCALENDAR""".trimIndent()
         
@@ -61,17 +59,17 @@ END:VCALENDAR""".trimIndent()
         return uid
     }
     
-    suspend fun updateEvent(eventId: String, summary: String, start: ZonedDateTime, end: ZonedDateTime) {
+    suspend fun updateEvent(eventId: String, summary: String, start: Instant, end: Instant) {
         val ics = """BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//CalSync//EN
 BEGIN:VEVENT
 UID:$eventId
-DTSTAMP:${ZonedDateTime.now().format(isoFormatter)}
+DTSTAMP:${Clock.System.now().toString()}
 SUMMARY:$summary
 DESCRIPTION:Synced by CalSync
-DTSTART:${start.format(isoFormatter)}
-DTEND:${end.format(isoFormatter)}
+DTSTART:${start.toString()}
+DTEND:${end.toString()}
 END:VEVENT
 END:VCALENDAR""".trimIndent()
         
@@ -90,7 +88,7 @@ END:VCALENDAR""".trimIndent()
         }
     }
     
-    private fun parseCalDavResponse(xml: String, timeMin: ZonedDateTime, timeMax: ZonedDateTime): List<CalDavEvent> {
+    private fun parseCalDavResponse(xml: String, timeMin: Instant, timeMax: Instant): List<CalDavEvent> {
         val events = mutableListOf<CalDavEvent>()
         val uidPattern = "UID:([^\\s]+)".toRegex()
         val summaryPattern = "SUMMARY:([^\\r\\n]+)".toRegex()
@@ -107,10 +105,10 @@ END:VCALENDAR""".trimIndent()
             
             if (dtstart != null && dtend != null) {
                 try {
-                    val start = ZonedDateTime.parse(dtstart)
-                    val end = ZonedDateTime.parse(dtend)
+                    val start = Instant.parse(dtstart)
+                    val end = Instant.parse(dtend)
                     
-                    if (start.isBefore(timeMax) && end.isAfter(timeMin)) {
+                    if (start < timeMax && end > timeMin) {
                         events.add(CalDavEvent(uid, summary, null, start, end))
                     }
                 } catch (e: Exception) {
@@ -126,6 +124,6 @@ data class CalDavEvent(
     val id: String,
     val summary: String,
     val description: String?,
-    val start: ZonedDateTime,
-    val end: ZonedDateTime
+    val start: Instant,
+    val end: Instant
 )
