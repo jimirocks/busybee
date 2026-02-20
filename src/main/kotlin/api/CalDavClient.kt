@@ -1,5 +1,9 @@
 package rocks.jimi.calsync.api
 
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import rocks.jimi.calsync.config.CalendarConfig
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -10,6 +14,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 class CalDavClient(private val config: CalendarConfig) {
+    private val logger = KotlinLogging.logger { }
     private val client = HttpClient(CIO)
     private val baseUrl = config.url ?: throw IllegalArgumentException("CalDAV URL required")
     private val user = config.username ?: throw IllegalArgumentException("CalDAV username required")
@@ -35,25 +40,37 @@ class CalDavClient(private val config: CalendarConfig) {
         return parseCalDavResponse(response.bodyAsText(), timeMin, timeMax)
     }
     
+    private fun formatICalInstant(instant: Instant): String {
+        return instant.toString()
+            .replace("-", "")
+            .replace(":", "")
+            .replace(".", "")
+            .take(15) + "Z"
+    }
+    
     suspend fun createEvent(uid: String, summary: String, description: String?, start: Instant, end: Instant): String {
         val ics = """BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//CalSync//EN
 BEGIN:VEVENT
 UID:$uid
-DTSTAMP:${Clock.System.now().toString()}
+DTSTAMP:${formatICalInstant(Clock.System.now())}
 SUMMARY:$summary
 DESCRIPTION:$description
-DTSTART:${start.toString()}
-DTEND:${end.toString()}
+DTSTART:${formatICalInstant(start)}
+DTEND:${formatICalInstant(end)}
 END:VEVENT
 END:VCALENDAR""".trimIndent()
         
-        client.request("$baseUrl/$uid.ics") {
+        val response = client.request("$baseUrl/$uid.ics") {
             method = HttpMethod("PUT")
             basicAuth(user, pass)
             contentType(ContentType.Text.Any)
             setBody(ics)
+        }
+        
+        if (!response.status.isSuccess()) {
+            throw IllegalStateException("Failed to create CalDAV event: ${response.status}")
         }
         
         return uid
@@ -65,11 +82,11 @@ VERSION:2.0
 PRODID:-//CalSync//EN
 BEGIN:VEVENT
 UID:$eventId
-DTSTAMP:${Clock.System.now().toString()}
+DTSTAMP:${formatICalInstant(Clock.System.now())}
 SUMMARY:$summary
 DESCRIPTION:$description
-DTSTART:${start.toString()}
-DTEND:${end.toString()}
+DTSTART:${formatICalInstant(start)}
+DTEND:${formatICalInstant(end)}
 END:VEVENT
 END:VCALENDAR""".trimIndent()
         
@@ -90,35 +107,64 @@ END:VCALENDAR""".trimIndent()
     
     private fun parseCalDavResponse(xml: String, timeMin: Instant, timeMax: Instant): List<CalDavEvent> {
         val events = mutableListOf<CalDavEvent>()
+        
+        val unfolded = xml.replace(Regex("[\r\n][ \t]+"), "")
+        
         val uidPattern = "UID:([^\\s]+)".toRegex()
         val summaryPattern = "SUMMARY:([^\\r\\n]+)".toRegex()
         val descriptionPattern = "DESCRIPTION:([^\\r\\n]+)".toRegex()
-        val dtstartPattern = "DTSTART[^:]*:([^\\s]+)".toRegex()
-        val dtendPattern = "DTEND[^:]*:([^\\s]+)".toRegex()
+        val dtstartPattern = "DTSTART(?:;TZID=([^:]+))?:([^\\s]+)".toRegex()
+        val dtendPattern = "DTEND(?:;TZID=([^:]+))?:([^\\s]+)".toRegex()
         
-        val icalBlocks = xml.split("BEGIN:VEVENT").drop(1)
+        val icalBlocks = unfolded.split("BEGIN:VEVENT").drop(1)
         
         for (block in icalBlocks) {
             val uid = uidPattern.find(block)?.groupValues?.get(1) ?: continue
             val summary = summaryPattern.find(block)?.groupValues?.get(1) ?: "Busy"
             val description = descriptionPattern.find(block)?.groupValues?.get(1)
-            val dtstart = dtstartPattern.find(block)?.groupValues?.get(1)
-            val dtend = dtendPattern.find(block)?.groupValues?.get(1)
             
-            if (dtstart != null && dtend != null) {
-                try {
-                    val start = Instant.parse(dtstart)
-                    val end = Instant.parse(dtend)
-                    
-                    if (start < timeMax && end > timeMin) {
-                        events.add(CalDavEvent(uid, summary, description, start, end))
+            val dtstartMatch = dtstartPattern.find(block)
+            val dtendMatch = dtendPattern.find(block)
+            
+            if (dtstartMatch != null && dtendMatch != null) {
+                val tzid = dtstartMatch.groupValues.getOrNull(1)?.takeIf { it.isNotEmpty() }
+                val dtstartValue = dtstartMatch.groupValues.getOrNull(2)
+                val dtendValue = dtendMatch.groupValues.getOrNull(2)
+                
+                if (dtstartValue != null && dtendValue != null) {
+                    try {
+                        val start = parseICalDateTime(dtstartValue, tzid)
+                        val end = parseICalDateTime(dtendValue, tzid)
+                        
+                        if (start < timeMax && end > timeMin) {
+                            events.add(CalDavEvent(uid, summary, description, start, end))
+                        }
+                    } catch (e: Exception) {
+                        logger.warn(e) { "Failed to parse CalDAV event: uid=$uid, dtstart=$dtstartValue, dtend=$dtendValue, tzid=$tzid" }
                     }
-                } catch (e: Exception) {
                 }
             }
         }
         
         return events
+    }
+    
+    private fun parseICalDateTime(value: String, tzid: String?): Instant {
+        val localDateTime = LocalDateTime(
+            value.substring(0, 4).toInt(),
+            value.substring(4, 6).toInt(),
+            value.substring(6, 8).toInt(),
+            value.substring(9, 11).toInt(),
+            value.substring(11, 13).toInt(),
+            value.substring(13, 15).toInt()
+        )
+        
+        return if (tzid != null) {
+            val timeZone = TimeZone.of(tzid)
+            localDateTime.toInstant(timeZone)
+        } else {
+            localDateTime.toInstant(TimeZone.UTC)
+        }
     }
 }
 

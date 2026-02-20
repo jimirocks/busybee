@@ -1,6 +1,7 @@
 package rocks.jimi.calsync.sync
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import rocks.jimi.calsync.CalendarEvent
@@ -17,6 +18,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 class SyncEngine(private val config: Config) {
+    private val logger = KotlinLogging.logger { }
     private val prefix = config.sync.prefix
     private val tokenManagers = config.calendars
         .filter { it.type == "google" }
@@ -45,6 +47,7 @@ class SyncEngine(private val config: Config) {
     }
     
     private suspend fun doSync() {
+        logger.info { "Starting sync" }
         val now = Clock.System.now()
         val timeMin = now.minus(7.days)
         val timeMax = now.plus(30.days)
@@ -62,11 +65,12 @@ class SyncEngine(private val config: Config) {
         
         cleanupDeletedEvents(allEvents)
         saveState()
+        logger.info { "Sync completed" }
     }
     
     private suspend fun fetchEvents(cfg: CalendarConfig, timeMin: Instant, timeMax: Instant): List<CalendarEvent> {
         val client = clients[cfg.id]!!
-        val events = when (client) {
+        val events: List<CalendarEvent> = when (client) {
             is GoogleCalendarClient -> safeGoogleCall { client.listEvents(timeMin, timeMax) }.map { e ->
                 CalendarEvent(
                     id = e.id,
@@ -79,7 +83,7 @@ class SyncEngine(private val config: Config) {
                     syncId = if (e.summary.startsWith(prefix)) e.description else null
                 )
             }
-            is CalDavClient -> client.listEvents(timeMin, timeMax).map { e ->
+            is CalDavClient -> safeCalDavCall { client.listEvents(timeMin, timeMax) }?.map { e ->
                 CalendarEvent(
                     id = e.id,
                     summary = e.summary,
@@ -90,7 +94,7 @@ class SyncEngine(private val config: Config) {
                     isOriginal = !e.summary.startsWith(prefix),
                     syncId = if (e.summary.startsWith(prefix)) e.description else null
                 )
-            }
+            } ?: emptyList()
             else -> emptyList()
         }
         return events
@@ -111,7 +115,17 @@ class SyncEngine(private val config: Config) {
         }
     }
     
+    private suspend fun <T> safeCalDavCall(block: suspend () -> T): T? {
+        return try {
+            block()
+        } catch (e: Exception) {
+            logger.error(e) { "CalDAV operation failed" }
+            null
+        }
+    }
+    
     private suspend fun syncCalendar(sourceCalId: String, allEvents: MutableMap<String, MutableList<CalendarEvent>>) {
+        logger.info { "Syncing calendar: $sourceCalId" }
         val sourceEvents = allEvents[sourceCalId] ?: return
         val originalEvents = sourceEvents.filter { it.isOriginal }
         
@@ -148,19 +162,29 @@ class SyncEngine(private val config: Config) {
         allEvents: MutableMap<String, MutableList<CalendarEvent>>
     ) {
         val client = clients[targetCalId]!!
-        val newEventId = when (client) {
+        
+        val newEventId: String? = when (client) {
             is GoogleCalendarClient -> safeGoogleCall {
                 client.createEvent("$prefix ${original.summary}", syncId, original.start, original.end)
             }
-            is CalDavClient -> client.createEvent(
-                UUID.randomUUID().toString(),
-                "$prefix ${original.summary}",
-                syncId,
-                original.start,
-                original.end
-            )
+            is CalDavClient -> safeCalDavCall {
+                client.createEvent(
+                    UUID.randomUUID().toString(),
+                    "$prefix ${original.summary}",
+                    syncId,
+                    original.start,
+                    original.end
+                )
+            }
             else -> return
         }
+        
+        if (newEventId == null) {
+            logger.warn { "Failed to create sync event on $targetCalId" }
+            return
+        }
+        
+        logger.debug { "Created sync event on $targetCalId: $newEventId" }
         
         val targetKey = "${targetCalId}_$syncId"
         state[targetKey] = SyncState(
@@ -187,17 +211,22 @@ class SyncEngine(private val config: Config) {
     
     private suspend fun updateSyncEvent(targetCalId: String, eventId: String, original: CalendarEvent, syncId: String) {
         val client = clients[targetCalId]!!
-        when (client) {
-            is GoogleCalendarClient -> safeGoogleCall {
-                client.updateEvent(eventId, "$prefix ${original.summary}", syncId, original.start, original.end)
+        try {
+            when (client) {
+                is GoogleCalendarClient -> safeGoogleCall {
+                    client.updateEvent(eventId, "$prefix ${original.summary}", syncId, original.start, original.end)
+                }
+                is CalDavClient -> client.updateEvent(
+                    eventId,
+                    "$prefix ${original.summary}",
+                    syncId,
+                    original.start,
+                    original.end
+                )
             }
-            is CalDavClient -> client.updateEvent(
-                eventId,
-                "$prefix ${original.summary}",
-                syncId,
-                original.start,
-                original.end
-            )
+            logger.debug { "Updated sync event on $targetCalId: $eventId" }
+        } catch (e: Exception) {
+            logger.error(e) { "Failed to update sync event on $targetCalId: $eventId" }
         }
     }
     
@@ -210,9 +239,14 @@ class SyncEngine(private val config: Config) {
             
             if (!sourceExists) {
                 val client = clients[syncState.targetCalendarId]
-                when (client) {
-                    is GoogleCalendarClient -> safeGoogleCall { client.deleteEvent(syncState.targetEventId) }
-                    is CalDavClient -> client.deleteEvent(syncState.targetEventId)
+                try {
+                    when (client) {
+                        is GoogleCalendarClient -> safeGoogleCall { client.deleteEvent(syncState.targetEventId) }
+                        is CalDavClient -> client.deleteEvent(syncState.targetEventId)
+                    }
+                    logger.debug { "Deleted sync event on ${syncState.targetCalendarId}: ${syncState.targetEventId}" }
+                } catch (e: Exception) {
+                    logger.error(e) { "Failed to delete sync event on ${syncState.targetCalendarId}: ${syncState.targetEventId}" }
                 }
                 toRemove.add(key)
             }

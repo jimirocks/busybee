@@ -18,6 +18,7 @@ dependencies {
     
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.0")
     
     implementation("com.google.api-client:google-api-client:2.8.1")
     implementation("com.google.apis:google-api-services-calendar:v3-rev20251207-2.0.0")
@@ -25,7 +26,8 @@ dependencies {
     
     implementation("com.sun.mail:javax.mail:1.6.2")
     
-    implementation("org.slf4j:slf4j-simple:2.0.9")
+    implementation("io.github.oshai:kotlin-logging-jvm:7.0.14")
+    runtimeOnly("org.slf4j:slf4j-simple:2.0.9")
     
     implementation("org.yaml:snakeyaml:2.2")
     
