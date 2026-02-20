@@ -49,6 +49,6 @@ tasks.register<Jar>("fatJar") {
         configurations.runtimeClasspath.get().map { zipTree(it) }
     })
     manifest {
-        attributes["Main-Class"] = "rocks.jimi.calsync.cli.MainKt"
+        attributes["Main-Class"] = "rocks.jimi.calsync.MainKt"
     }
 }
