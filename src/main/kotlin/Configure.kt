@@ -236,6 +236,9 @@ class Configure : CliktCommand(name = "configure") {
             return config
         }
 
+        println("\nEnter a shortcut identifier for these calendars (optional, e.g., 'work', 'home'):")
+        val shortcut = inputReader.readLine().ifEmpty { null }
+
         val newCalendars = selectedIndices.map { index ->
             val cal = calendars[index]
             CalendarConfig(
@@ -245,7 +248,8 @@ class Configure : CliktCommand(name = "configure") {
                 url = null,
                 username = null,
                 password = null,
-                tokenFile = tokenFile.absolutePath
+                tokenFile = tokenFile.absolutePath,
+                shortcut = shortcut
             )
         }
 
@@ -267,6 +271,7 @@ class Configure : CliktCommand(name = "configure") {
         val username = inputReader.readNonEmpty("Enter username:")
         val password = inputReader.readNonEmpty("Enter password:")
         val id = inputReader.readOptional("Enter calendar ID (for reference):", "caldav")
+        val shortcutInput = inputReader.readOptional("Enter shortcut identifier (optional):", "")
 
         val newCal = CalendarConfig(
             id = id,
@@ -275,7 +280,8 @@ class Configure : CliktCommand(name = "configure") {
             url = url,
             username = username,
             password = password,
-            tokenFile = ""
+            tokenFile = "",
+            shortcut = shortcutInput.ifEmpty { null }
         )
 
         val existingCalIds = config?.calendars?.map { it.id }?.toSet() ?: emptySet()

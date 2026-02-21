@@ -31,6 +31,7 @@ class ConfigSerializer(private val path: String = "config.yaml") {
                     if (cal.tokenFile.isNotEmpty()) {
                         put("tokenFile", cal.tokenFile)
                     }
+                    cal.shortcut?.let { put("shortcut", it) }
                 }
             })
             
@@ -57,7 +58,8 @@ class ConfigSerializer(private val path: String = "config.yaml") {
                 url = c["url"] as? String,
                 username = c["username"] as? String,
                 password = c["password"] as? String,
-                tokenFile = c["tokenFile"] as? String ?: ""
+                tokenFile = c["tokenFile"] as? String ?: "",
+                shortcut = c["shortcut"] as? String
             )
         } ?: emptyList()
         

@@ -27,6 +27,15 @@ class SyncEngine(private val config: Config) {
     private val stateFile = "sync-state.json"
     private val json = Json { prettyPrint = true }
     private val state: MutableMap<String, SyncState> by lazy { loadState() }
+
+    private fun effectivePrefix(calId: String): String {
+        val cal = config.calendars.find { it.id == calId }
+        return if (cal?.shortcut != null) {
+            "$prefix-${cal.shortcut}"
+        } else {
+            prefix
+        }
+    }
     
     private fun createClient(cfg: CalendarConfig): Any {
         return when (cfg.type) {
@@ -70,6 +79,7 @@ class SyncEngine(private val config: Config) {
     
     private suspend fun fetchEvents(cfg: CalendarConfig, timeMin: Instant, timeMax: Instant): List<CalendarEvent> {
         val client = clients[cfg.id]!!
+        val effPrefix = effectivePrefix(cfg.id)
         val events: List<CalendarEvent> = when (client) {
             is GoogleCalendarClient -> safeGoogleCall { client.listEvents(timeMin, timeMax) }.map { e ->
                 CalendarEvent(
@@ -79,8 +89,8 @@ class SyncEngine(private val config: Config) {
                     start = e.start,
                     end = e.end,
                     calendarId = cfg.id,
-                    isOriginal = !e.summary.startsWith(prefix),
-                    syncId = if (e.summary.startsWith(prefix)) e.description else null
+                    isOriginal = !e.summary.startsWith(effPrefix),
+                    syncId = if (e.summary.startsWith(effPrefix)) e.description else null
                 )
             }
             is CalDavClient -> safeCalDavCall { client.listEvents(timeMin, timeMax) }?.map { e ->
@@ -91,8 +101,8 @@ class SyncEngine(private val config: Config) {
                     start = e.start,
                     end = e.end,
                     calendarId = cfg.id,
-                    isOriginal = !e.summary.startsWith(prefix),
-                    syncId = if (e.summary.startsWith(prefix)) e.description else null
+                    isOriginal = !e.summary.startsWith(effPrefix),
+                    syncId = if (e.summary.startsWith(effPrefix)) e.description else null
                 )
             } ?: emptyList()
             else -> emptyList()
@@ -128,27 +138,28 @@ class SyncEngine(private val config: Config) {
         logger.info { "Syncing calendar: $sourceCalId" }
         val sourceEvents = allEvents[sourceCalId] ?: return
         val originalEvents = sourceEvents.filter { it.isOriginal }
-        
+        val effPrefix = effectivePrefix(sourceCalId)
+
         for (original in originalEvents) {
             val syncId = "${sourceCalId}_${original.id}"
-            
+
             for (targetCal in config.calendars) {
                 if (targetCal.id == sourceCalId) continue
-                
+
                 val targetKey = "${targetCal.id}_$syncId"
                 val targetEvents = allEvents[targetCal.id] ?: continue
                 val existingTargetEvent = targetEvents.find { it.syncId == syncId }
-                
+
                 when {
                     existingTargetEvent != null -> {
-                        if (existingTargetEvent.summary != "$prefix ${original.summary}" ||
+                        if (existingTargetEvent.summary != "$effPrefix ${original.summary}" ||
                             existingTargetEvent.start != original.start ||
                             existingTargetEvent.end != original.end) {
-                            updateSyncEvent(targetCal.id, existingTargetEvent.id, original, syncId)
+                            updateSyncEvent(targetCal.id, existingTargetEvent.id, original, syncId, sourceCalId)
                         }
                     }
                     else -> {
-                        createSyncEvent(targetCal.id, original, syncId, allEvents)
+                        createSyncEvent(targetCal.id, original, syncId, allEvents, sourceCalId)
                     }
                 }
             }
@@ -159,18 +170,20 @@ class SyncEngine(private val config: Config) {
         targetCalId: String,
         original: CalendarEvent,
         syncId: String,
-        allEvents: MutableMap<String, MutableList<CalendarEvent>>
+        allEvents: MutableMap<String, MutableList<CalendarEvent>>,
+        sourceCalId: String
     ) {
         val client = clients[targetCalId]!!
-        
+        val effPrefix = effectivePrefix(sourceCalId)
+
         val newEventId: String? = when (client) {
             is GoogleCalendarClient -> safeGoogleCall {
-                client.createEvent("$prefix ${original.summary}", syncId, original.start, original.end)
+                client.createEvent("$effPrefix ${original.summary}", syncId, original.start, original.end)
             }
             is CalDavClient -> safeCalDavCall {
                 client.createEvent(
                     UUID.randomUUID().toString(),
-                    "$prefix ${original.summary}",
+                    "$effPrefix ${original.summary}",
                     syncId,
                     original.start,
                     original.end
@@ -178,14 +191,14 @@ class SyncEngine(private val config: Config) {
             }
             else -> return
         }
-        
+
         if (newEventId == null) {
             logger.warn { "Failed to create sync event on $targetCalId" }
             return
         }
-        
+
         logger.debug { "Created sync event on $targetCalId: $newEventId" }
-        
+
         val targetKey = "${targetCalId}_$syncId"
         state[targetKey] = SyncState(
             sourceCalendarId = original.calendarId,
@@ -194,11 +207,11 @@ class SyncEngine(private val config: Config) {
             targetEventId = newEventId,
             createdAt = System.currentTimeMillis()
         )
-        
+
         allEvents.getOrPut(targetCalId) { mutableListOf() }.add(
             CalendarEvent(
                 id = newEventId,
-                summary = "$prefix ${original.summary}",
+                summary = "$effPrefix ${original.summary}",
                 description = syncId,
                 start = original.start,
                 end = original.end,
@@ -209,16 +222,17 @@ class SyncEngine(private val config: Config) {
         )
     }
     
-    private suspend fun updateSyncEvent(targetCalId: String, eventId: String, original: CalendarEvent, syncId: String) {
+    private suspend fun updateSyncEvent(targetCalId: String, eventId: String, original: CalendarEvent, syncId: String, sourceCalId: String) {
         val client = clients[targetCalId]!!
+        val effPrefix = effectivePrefix(sourceCalId)
         try {
             when (client) {
                 is GoogleCalendarClient -> safeGoogleCall {
-                    client.updateEvent(eventId, "$prefix ${original.summary}", syncId, original.start, original.end)
+                    client.updateEvent(eventId, "$effPrefix ${original.summary}", syncId, original.start, original.end)
                 }
                 is CalDavClient -> client.updateEvent(
                     eventId,
-                    "$prefix ${original.summary}",
+                    "$effPrefix ${original.summary}",
                     syncId,
                     original.start,
                     original.end

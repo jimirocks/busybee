@@ -24,7 +24,8 @@ class ConsoleUI {
                     cal.url != null -> cal.url
                     else -> ""
                 }
-                println("  ${index + 1}. ${cal.id} ($typeStr) - $detail")
+                val shortcutStr = cal.shortcut?.let { " [$it]" } ?: ""
+                println("  ${index + 1}. ${cal.id} ($typeStr) - $detail$shortcutStr")
             }
         } else {
             println("  (none)")
@@ -98,7 +99,8 @@ class ConsoleUI {
         println("\n=== Remove Calendar ===")
         println("")
         config.calendars.forEachIndexed { index, cal ->
-            println("  ${index + 1}. ${cal.id} (${cal.type})")
+            val shortcutStr = cal.shortcut?.let { " [$it]" } ?: ""
+            println("  ${index + 1}. ${cal.id} (${cal.type})$shortcutStr")
         }
     }
 

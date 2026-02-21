@@ -17,7 +17,8 @@ object ConfigLoader {
                 url = c["url"] as? String,
                 username = c["username"] as? String,
                 password = c["password"] as? String,
-                tokenFile = c["tokenFile"] as? String ?: ""
+                tokenFile = c["tokenFile"] as? String ?: "",
+                shortcut = c["shortcut"] as? String
             )
         } ?: emptyList()
         
