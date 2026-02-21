@@ -113,12 +113,16 @@ END:VCALENDAR""".trimIndent()
         val uidPattern = "UID:([^\\s]+)".toRegex()
         val summaryPattern = "SUMMARY:([^\\r\\n]+)".toRegex()
         val descriptionPattern = "DESCRIPTION:([^\\r\\n]+)".toRegex()
+        val statusPattern = "STATUS:([^\\r\\n]+)".toRegex()
         val dtstartPattern = "DTSTART(?:;TZID=([^:]+))?:([^\\s]+)".toRegex()
         val dtendPattern = "DTEND(?:;TZID=([^:]+))?:([^\\s]+)".toRegex()
         
         val icalBlocks = unfolded.split("BEGIN:VEVENT").drop(1)
         
         for (block in icalBlocks) {
+            val status = statusPattern.find(block)?.groupValues?.get(1)
+            if (status != null && status != "CONFIRMED") continue
+
             val uid = uidPattern.find(block)?.groupValues?.get(1) ?: continue
             val summary = summaryPattern.find(block)?.groupValues?.get(1) ?: "Busy"
             val description = descriptionPattern.find(block)?.groupValues?.get(1)

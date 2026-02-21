@@ -37,6 +37,7 @@ class GoogleCalendarClient(
             .execute()
         
         return events.items?.mapNotNull { e ->
+            if (e.status != "confirmed") return@mapNotNull null
             val startTime = e.start.dateTime?.toString() ?: e.start.date?.toString() ?: return@mapNotNull null
             val endTime = e.end.dateTime?.toString() ?: e.end.date?.toString() ?: return@mapNotNull null
             GoogleEvent(
