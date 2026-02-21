@@ -1,62 +1,50 @@
 package rocks.jimi.calsync.oauth
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-import kotlin.test.assertIs
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeInstanceOf
 
-class OAuthHandlerTest {
+class OAuthHandlerTest : StringSpec({
 
-    @Test
-    fun `buildAuthorizationUrl contains correct parameters`() {
+    "buildAuthorizationUrl contains correct parameters" {
         val handler = OAuthHandler()
         val url = handler.buildAuthorizationUrl("test-client-id")
 
-        assertTrue(url.startsWith("https://accounts.google.com/o/oauth2/v2/auth?"))
-        assertTrue(url.contains("client_id=test-client-id"))
-        assertTrue(url.contains("redirect_uri=urn:ietf:wg:oauth:2.0:oob"))
-        assertTrue(url.contains("response_type=code"))
-        assertTrue(url.contains("access_type=offline"))
-        assertTrue(url.contains("scope="))
+        url shouldContain "https://accounts.google.com/o/oauth2/v2/auth?"
+        url shouldContain "client_id=test-client-id"
+        url shouldContain "redirect_uri=urn:ietf:wg:oauth:2.0:oob"
+        url shouldContain "response_type=code"
+        url shouldContain "access_type=offline"
+        url shouldContain "scope="
     }
 
-    @Test
-    fun `buildAuthorizationUrl encodes special characters in clientId`() {
+    "buildAuthorizationUrl encodes special characters in clientId" {
         val handler = OAuthHandler()
         val url = handler.buildAuthorizationUrl("test+special@chars")
 
-        assertTrue(url.contains("client_id="))
-        assertTrue(url.contains("test%2Bspecial%40chars"))
+        url shouldContain "client_id="
+        url shouldContain "test%2Bspecial%40chars"
     }
 
-    @Test
-    fun `OAuthTokenResult Success from valid response`() {
-        // Test that the OAuthTokenResult.Success correctly holds a refresh token
+    "OAuthTokenResult Success from valid response" {
         val result = OAuthTokenResult.Success("1//0g...")
-        assertIs<OAuthTokenResult.Success>(result)
-        assertEquals("1//0g...", result.refreshToken)
+        result.shouldBeInstanceOf<OAuthTokenResult.Success>()
+        result.refreshToken shouldBe "1//0g..."
     }
 
-    @Test
-    fun `exchangeForRefreshToken returns InvalidGrant for invalid code`() {
-        val handler = OAuthHandler()
-        val response = """{"error": "invalid_grant", "error_description": "Code was already redeemed."}"""
-
-        // This is a simple test that would need mocking for full coverage
-        // Just verifying the sealed class works correctly
+    "exchangeForRefreshToken returns InvalidGrant for invalid code" {
         val result = OAuthTokenResult.InvalidGrant
-        assertIs<OAuthTokenResult.InvalidGrant>(result)
+        result.shouldBeInstanceOf<OAuthTokenResult.InvalidGrant>()
     }
 
-    @Test
-    fun `OAuthTokenResult Success holds refresh token`() {
+    "OAuthTokenResult Success holds refresh token" {
         val result = OAuthTokenResult.Success("test-token-123")
-        assertEquals("test-token-123", result.refreshToken)
+        result.refreshToken shouldBe "test-token-123"
     }
 
-    @Test
-    fun `OAuthTokenResult Error holds message`() {
+    "OAuthTokenResult Error holds message" {
         val result = OAuthTokenResult.Error("Something went wrong")
-        assertEquals("Something went wrong", result.message)
+        result.message shouldBe "Something went wrong"
     }
-}
+})

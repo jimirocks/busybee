@@ -1,18 +1,22 @@
 package rocks.jimi.calsync.cli
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
-import rocks.jimi.calsync.config.Config
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
 import rocks.jimi.calsync.config.CalendarConfig
+import rocks.jimi.calsync.config.Config
 import rocks.jimi.calsync.config.OAuthConfig
 import rocks.jimi.calsync.config.SyncConfig
+import java.io.File
 
-class ConfigSerializerTest {
+class ConfigSerializerTest : StringSpec({
 
-    @Test
-    fun `save and load roundtrip preserves config with all fields`() {
+    fun createTempConfigFile(): File {
+        return File.createTempFile("calsync-test", ".yaml").also {
+            it.deleteOnExit()
+        }
+    }
+
+    "save and load roundtrip preserves config with all fields" {
         val tempFile = createTempConfigFile()
         val serializer = ConfigSerializer(tempFile.absolutePath)
 
@@ -39,28 +43,27 @@ class ConfigSerializerTest {
         serializer.save(original)
         val loaded = serializer.load()
 
-        assertEquals(2, loaded.calendars.size)
-        assertEquals("work_calendar", loaded.calendars[0].id)
-        assertEquals("google", loaded.calendars[0].type)
-        assertEquals("primary", loaded.calendars[0].calendarId)
-        assertEquals("/tokens/work.json", loaded.calendars[0].tokenFile)
+        loaded.calendars.size shouldBe 2
+        loaded.calendars[0].id shouldBe "work_calendar"
+        loaded.calendars[0].type shouldBe "google"
+        loaded.calendars[0].calendarId shouldBe "primary"
+        loaded.calendars[0].tokenFile shouldBe "/tokens/work.json"
 
-        assertEquals("caldav_personal", loaded.calendars[1].id)
-        assertEquals("caldav", loaded.calendars[1].type)
-        assertEquals("https://caldav.example.com", loaded.calendars[1].url)
-        assertEquals("user", loaded.calendars[1].username)
+        loaded.calendars[1].id shouldBe "caldav_personal"
+        loaded.calendars[1].type shouldBe "caldav"
+        loaded.calendars[1].url shouldBe "https://caldav.example.com"
+        loaded.calendars[1].username shouldBe "user"
 
-        assertEquals(30, loaded.sync.intervalMinutes)
-        assertEquals("[SYNC]", loaded.sync.prefix)
+        loaded.sync.intervalMinutes shouldBe 30
+        loaded.sync.prefix shouldBe "[SYNC]"
 
-        assertEquals("test-client-id", loaded.oauth?.clientId)
-        assertEquals("test-secret", loaded.oauth?.clientSecret)
+        loaded.oauth?.clientId shouldBe "test-client-id"
+        loaded.oauth?.clientSecret shouldBe "test-secret"
 
         tempFile.delete()
     }
 
-    @Test
-    fun `save and load roundtrip preserves minimal config`() {
+    "save and load roundtrip preserves minimal config" {
         val tempFile = createTempConfigFile()
         val serializer = ConfigSerializer(tempFile.absolutePath)
 
@@ -69,16 +72,15 @@ class ConfigSerializerTest {
         serializer.save(original)
         val loaded = serializer.load()
 
-        assertTrue(loaded.calendars.isEmpty())
-        assertEquals(15, loaded.sync.intervalMinutes)
-        assertEquals("[SYNC]", loaded.sync.prefix)
-        assertNull(loaded.oauth)
+        loaded.calendars.isEmpty() shouldBe true
+        loaded.sync.intervalMinutes shouldBe 15
+        loaded.sync.prefix shouldBe "[SYNC]"
+        loaded.oauth shouldBe null
 
         tempFile.delete()
     }
 
-    @Test
-    fun `save and load roundtrip preserves config without oauth`() {
+    "save and load roundtrip preserves config without oauth" {
         val tempFile = createTempConfigFile()
         val serializer = ConfigSerializer(tempFile.absolutePath)
 
@@ -92,17 +94,11 @@ class ConfigSerializerTest {
         serializer.save(original)
         val loaded = serializer.load()
 
-        assertEquals(1, loaded.calendars.size)
-        assertNull(loaded.oauth)
-        assertEquals(60, loaded.sync.intervalMinutes)
-        assertEquals("[BUSY]", loaded.sync.prefix)
+        loaded.calendars.size shouldBe 1
+        loaded.oauth shouldBe null
+        loaded.sync.intervalMinutes shouldBe 60
+        loaded.sync.prefix shouldBe "[BUSY]"
 
         tempFile.delete()
     }
-
-    private fun createTempConfigFile(): java.io.File {
-        return java.io.File.createTempFile("calsync-test", ".yaml").also {
-            it.deleteOnExit()
-        }
-    }
-}
+})

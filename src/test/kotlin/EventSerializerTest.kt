@@ -1,16 +1,15 @@
 package rocks.jimi.calsync
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
 import kotlinx.serialization.json.Json
 import kotlin.time.Instant
 
-class EventSerializerTest {
+class EventSerializerTest : StringSpec({
 
-    private val json = Json { prettyPrint = true }
+    val json = Json { prettyPrint = true }
 
-    @Test
-    fun `serialize and deserialize roundtrip preserves CalendarEvent`() {
+    "serialize and deserialize roundtrip preserves CalendarEvent" {
         val event = CalendarEvent(
             id = "event-123",
             summary = "Team Meeting",
@@ -25,18 +24,17 @@ class EventSerializerTest {
         val serialized = json.encodeToString(event)
         val deserialized = json.decodeFromString<CalendarEvent>(serialized)
 
-        assertEquals(event.id, deserialized.id)
-        assertEquals(event.summary, deserialized.summary)
-        assertEquals(event.description, deserialized.description)
-        assertEquals(event.start, deserialized.start)
-        assertEquals(event.end, deserialized.end)
-        assertEquals(event.calendarId, deserialized.calendarId)
-        assertEquals(event.isOriginal, deserialized.isOriginal)
-        assertEquals(event.syncId, deserialized.syncId)
+        deserialized.id shouldBe event.id
+        deserialized.summary shouldBe event.summary
+        deserialized.description shouldBe event.description
+        deserialized.start shouldBe event.start
+        deserialized.end shouldBe event.end
+        deserialized.calendarId shouldBe event.calendarId
+        deserialized.isOriginal shouldBe event.isOriginal
+        deserialized.syncId shouldBe event.syncId
     }
 
-    @Test
-    fun `serialize and deserialize roundtrip preserves CalendarEvent with syncId`() {
+    "serialize and deserialize roundtrip preserves CalendarEvent with syncId" {
         val event = CalendarEvent(
             id = "sync-event-456",
             summary = "[SYNC] Team Meeting",
@@ -51,24 +49,22 @@ class EventSerializerTest {
         val serialized = json.encodeToString(event)
         val deserialized = json.decodeFromString<CalendarEvent>(serialized)
 
-        assertEquals(event.id, deserialized.id)
-        assertEquals(event.summary, deserialized.summary)
-        assertEquals(event.start, deserialized.start)
-        assertEquals(event.syncId, deserialized.syncId)
+        deserialized.id shouldBe event.id
+        deserialized.summary shouldBe event.summary
+        deserialized.start shouldBe event.start
+        deserialized.syncId shouldBe event.syncId
     }
 
-    @Test
-    fun `deserialize from ISO 8601 string produces correct Instant`() {
+    "deserialize from ISO 8601 string produces correct Instant" {
         val jsonString = """{"id":"test","summary":"Test","description":null,"start":"2024-06-20T09:15:30Z","end":"2024-06-20T10:15:30Z","calendarId":"cal","isOriginal":true}"""
 
         val event = json.decodeFromString<CalendarEvent>(jsonString)
 
-        assertEquals(Instant.parse("2024-06-20T09:15:30Z"), event.start)
-        assertEquals(Instant.parse("2024-06-20T10:15:30Z"), event.end)
+        event.start shouldBe Instant.parse("2024-06-20T09:15:30Z")
+        event.end shouldBe Instant.parse("2024-06-20T10:15:30Z")
     }
 
-    @Test
-    fun `serialize SyncState roundtrip preserves data`() {
+    "serialize SyncState roundtrip preserves data" {
         val state = SyncState(
             sourceCalendarId = "work",
             sourceEventId = "event-abc",
@@ -80,10 +76,10 @@ class EventSerializerTest {
         val serialized = json.encodeToString(state)
         val deserialized = json.decodeFromString<SyncState>(serialized)
 
-        assertEquals(state.sourceCalendarId, deserialized.sourceCalendarId)
-        assertEquals(state.sourceEventId, deserialized.sourceEventId)
-        assertEquals(state.targetCalendarId, deserialized.targetCalendarId)
-        assertEquals(state.targetEventId, deserialized.targetEventId)
-        assertEquals(state.createdAt, deserialized.createdAt)
+        deserialized.sourceCalendarId shouldBe state.sourceCalendarId
+        deserialized.sourceEventId shouldBe state.sourceEventId
+        deserialized.targetCalendarId shouldBe state.targetCalendarId
+        deserialized.targetEventId shouldBe state.targetEventId
+        deserialized.createdAt shouldBe state.createdAt
     }
-}
+})

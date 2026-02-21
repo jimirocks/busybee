@@ -1,89 +1,78 @@
 package rocks.jimi.calsync.cli
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.shouldBe
 
-class InputReaderTest {
+class InputReaderTest : StringSpec({
 
-    private fun createMockReader(inputs: List<String>): InputReader {
+    fun createMockReader(inputs: List<String>): InputReader {
         val iterator = inputs.iterator()
         return InputReader { iterator.next() }
     }
 
-    @Test
-    fun `readLine returns input when no validation required`() {
+    "readLine returns input when no validation required" {
         val reader = createMockReader(listOf("hello"))
         val result = reader.readLine()
-        assertEquals("hello", result)
+        result shouldBe "hello"
     }
 
-    @Test
-    fun `readLine returns trimmed input`() {
+    "readLine returns trimmed input" {
         val reader = createMockReader(listOf("  hello  "))
         val result = reader.readLine()
-        assertEquals("hello", result)
+        result shouldBe "hello"
     }
 
-    @Test
-    fun `readLine accepts valid option`() {
+    "readLine accepts valid option" {
         val reader = createMockReader(listOf("y"))
         val result = reader.readLine(listOf("y", "n"))
-        assertEquals("y", result)
+        result shouldBe "y"
     }
 
-    @Test
-    fun `readLine does exact match - case sensitive`() {
+    "readLine does exact match - case sensitive" {
         val reader = createMockReader(listOf("Y", "y"))
         val result = reader.readLine(listOf("y", "n"))
-        assertEquals("y", result)
+        result shouldBe "y"
     }
 
-    @Test
-    fun `readLine prompts again for invalid input`() {
+    "readLine prompts again for invalid input" {
         val reader = createMockReader(listOf("invalid", "valid"))
         val result = reader.readLine(listOf("valid"))
-        assertEquals("valid", result)
+        result shouldBe "valid"
     }
 
-    @Test
-    fun `readNonEmpty returns non-empty input`() {
+    "readNonEmpty returns non-empty input" {
         val reader = createMockReader(listOf("some input"))
         val result = reader.readNonEmpty("Enter value:")
-        assertEquals("some input", result)
+        result shouldBe "some input"
     }
 
-    @Test
-    fun `readOptional returns input when provided`() {
+    "readOptional returns input when provided" {
         val reader = createMockReader(listOf("custom"))
         val result = reader.readOptional("Enter value:", "default")
-        assertEquals("custom", result)
+        result shouldBe "custom"
     }
 
-    @Test
-    fun `readOptional returns default when empty`() {
+    "readOptional returns default when empty" {
         val reader = createMockReader(listOf(""))
         val result = reader.readOptional("Enter value:", "default")
-        assertEquals("default", result)
+        result shouldBe "default"
     }
 
-    @Test
-    fun `readInt returns parsed integer`() {
+    "readInt returns parsed integer" {
         val reader = createMockReader(listOf("42"))
         val result = reader.readInt("Enter number:", 10)
-        assertEquals(42, result)
+        result shouldBe 42
     }
 
-    @Test
-    fun `readInt returns default for invalid input`() {
+    "readInt returns default for invalid input" {
         val reader = createMockReader(listOf("abc", "10"))
         val result = reader.readInt("Enter number:", 10)
-        assertEquals(10, result)
+        result shouldBe 10
     }
 
-    @Test
-    fun `readInt returns default for empty input`() {
+    "readInt returns default for empty input" {
         val reader = createMockReader(listOf(""))
         val result = reader.readInt("Enter number:", 99)
-        assertEquals(99, result)
+        result shouldBe 99
     }
-}
+})
