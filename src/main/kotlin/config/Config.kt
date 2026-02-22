@@ -11,7 +11,8 @@ data class CalendarConfig(
     val username: String? = null,
     val password: String? = null,
     val tokenFile: String = "",
-    val shortcut: String? = null
+    val shortcut: String? = null,
+    val visibility: String? = null
 )
 
 @Serializable

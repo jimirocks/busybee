@@ -48,19 +48,23 @@ class CalDavClient(private val config: CalendarConfig) {
             .take(15) + "Z"
     }
     
-    suspend fun createEvent(uid: String, summary: String, description: String?, start: Instant, end: Instant): String {
-        val ics = """BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//BusyBee//EN
-BEGIN:VEVENT
-UID:$uid
-DTSTAMP:${formatICalInstant(Clock.System.now())}
-SUMMARY:$summary
-DESCRIPTION:$description
-DTSTART:${formatICalInstant(start)}
-DTEND:${formatICalInstant(end)}
-END:VEVENT
-END:VCALENDAR""".trimIndent()
+    suspend fun createEvent(uid: String, summary: String, description: String?, start: Instant, end: Instant, visibility: String? = null): String {
+        val classLine = if (visibility == "private") "CLASS:PRIVATE" else ""
+        val ics = buildString {
+            appendLine("BEGIN:VCALENDAR")
+            appendLine("VERSION:2.0")
+            appendLine("PRODID:-//BusyBee//EN")
+            appendLine("BEGIN:VEVENT")
+            appendLine("UID:$uid")
+            appendLine("DTSTAMP:${formatICalInstant(Clock.System.now())}")
+            appendLine("SUMMARY:$summary")
+            appendLine("DESCRIPTION:$description")
+            appendLine("DTSTART:${formatICalInstant(start)}")
+            appendLine("DTEND:${formatICalInstant(end)}")
+            if (classLine.isNotEmpty()) appendLine(classLine)
+            appendLine("END:VEVENT")
+            appendLine("END:VCALENDAR")
+        }
         
         val response = client.request("$baseUrl/$uid.ics") {
             method = HttpMethod("PUT")
@@ -76,19 +80,23 @@ END:VCALENDAR""".trimIndent()
         return uid
     }
     
-    suspend fun updateEvent(eventId: String, summary: String, description: String?, start: Instant, end: Instant) {
-        val ics = """BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//BusyBee//EN
-BEGIN:VEVENT
-UID:$eventId
-DTSTAMP:${formatICalInstant(Clock.System.now())}
-SUMMARY:$summary
-DESCRIPTION:$description
-DTSTART:${formatICalInstant(start)}
-DTEND:${formatICalInstant(end)}
-END:VEVENT
-END:VCALENDAR""".trimIndent()
+    suspend fun updateEvent(eventId: String, summary: String, description: String?, start: Instant, end: Instant, visibility: String? = null) {
+        val classLine = if (visibility == "private") "CLASS:PRIVATE" else ""
+        val ics = buildString {
+            appendLine("BEGIN:VCALENDAR")
+            appendLine("VERSION:2.0")
+            appendLine("PRODID:-//BusyBee//EN")
+            appendLine("BEGIN:VEVENT")
+            appendLine("UID:$eventId")
+            appendLine("DTSTAMP:${formatICalInstant(Clock.System.now())}")
+            appendLine("SUMMARY:$summary")
+            appendLine("DESCRIPTION:$description")
+            appendLine("DTSTART:${formatICalInstant(start)}")
+            appendLine("DTEND:${formatICalInstant(end)}")
+            if (classLine.isNotEmpty()) appendLine(classLine)
+            appendLine("END:VEVENT")
+            appendLine("END:VCALENDAR")
+        }
         
         client.request("$baseUrl/$eventId.ics") {
             method = HttpMethod("PUT")

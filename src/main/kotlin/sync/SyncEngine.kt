@@ -215,7 +215,8 @@ class SyncEngine(private val config: Config, configPath: String) {
                     existingTargetEvent != null -> {
                         if (existingTargetEvent.summary != "$effPrefix ${original.summary}" ||
                             existingTargetEvent.start != original.start ||
-                            existingTargetEvent.end != original.end) {
+                            existingTargetEvent.end != original.end ||
+                            targetCal.visibility != null) {
                             updateSyncEvent(targetCal.id, existingTargetEvent.id, original, syncId, sourceCalId)
                         }
                     }
@@ -235,11 +236,12 @@ class SyncEngine(private val config: Config, configPath: String) {
         sourceCalId: String
     ) {
         val client = clients[targetCalId]!!
+        val targetCal = config.calendars.find { it.id == targetCalId }!!
         val effPrefix = effectivePrefix(sourceCalId)
 
         val newEventId: String? = when (client) {
             is GoogleCalendarClient -> safeGoogleCall {
-                client.createEvent("$effPrefix ${original.summary}", syncId, original.start, original.end)
+                client.createEvent("$effPrefix ${original.summary}", syncId, original.start, original.end, targetCal.visibility)
             }
             is CalDavClient -> safeCalDavCall {
                 client.createEvent(
@@ -247,7 +249,8 @@ class SyncEngine(private val config: Config, configPath: String) {
                     "$effPrefix ${original.summary}",
                     syncId,
                     original.start,
-                    original.end
+                    original.end,
+                    targetCal.visibility
                 )
             }
             else -> return
@@ -285,18 +288,20 @@ class SyncEngine(private val config: Config, configPath: String) {
     
     private suspend fun updateSyncEvent(targetCalId: String, eventId: String, original: CalendarEvent, syncId: String, sourceCalId: String) {
         val client = clients[targetCalId]!!
+        val targetCal = config.calendars.find { it.id == targetCalId }!!
         val effPrefix = effectivePrefix(sourceCalId)
         try {
             when (client) {
                 is GoogleCalendarClient -> safeGoogleCall {
-                    client.updateEvent(eventId, "$effPrefix ${original.summary}", syncId, original.start, original.end)
+                    client.updateEvent(eventId, "$effPrefix ${original.summary}", syncId, original.start, original.end, targetCal.visibility)
                 }
                 is CalDavClient -> client.updateEvent(
                     eventId,
                     "$effPrefix ${original.summary}",
                     syncId,
                     original.start,
-                    original.end
+                    original.end,
+                    targetCal.visibility
                 )
             }
             logger.debug { "Updated sync event on $targetCalId: $eventId" }

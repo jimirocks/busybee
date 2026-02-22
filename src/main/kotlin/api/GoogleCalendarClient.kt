@@ -59,10 +59,11 @@ class GoogleCalendarClient(
         } ?: emptyList()
     }
     
-    fun createEvent(summary: String, description: String?, start: Instant, end: Instant): String {
+    fun createEvent(summary: String, description: String?, start: Instant, end: Instant, visibility: String? = null): String {
         val event = com.google.api.services.calendar.model.Event().apply {
             this.summary = summary
             this.description = description
+            this.visibility = visibility
             this.start = com.google.api.services.calendar.model.EventDateTime()
                 .setDateTime(com.google.api.client.util.DateTime(start.toString()))
             this.end = com.google.api.services.calendar.model.EventDateTime()
@@ -73,10 +74,11 @@ class GoogleCalendarClient(
         return created.id
     }
     
-    fun updateEvent(eventId: String, summary: String, description: String?, start: Instant, end: Instant) {
+    fun updateEvent(eventId: String, summary: String, description: String?, start: Instant, end: Instant, visibility: String? = null) {
         val event = service.events().get(config.calendarId, eventId).execute()
         event.summary = summary
         event.description = description
+        event.visibility = visibility
         event.start = com.google.api.services.calendar.model.EventDateTime()
             .setDateTime(com.google.api.client.util.DateTime(start.toString()))
         event.end = com.google.api.services.calendar.model.EventDateTime()
