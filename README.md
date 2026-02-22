@@ -14,6 +14,10 @@ Automated calendar synchronization that mirrors "busy" time slots across multipl
 - Infinite loop prevention with sync markers
 - Configurable sync interval
 
+## Limitations
+
+- **Timed events only**: Only events with specific start/end times are synced. All-day and multi-day events are not currently supported.
+
 ## Unfinished / Experimental Features
 
 - **Daemon mode** (`java -jar busybee.jar run`) - Has not been tested
