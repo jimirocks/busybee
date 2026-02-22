@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.requireObject
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import rocks.jimi.busybee.config.AlertConfig
 import java.util.concurrent.Executors
@@ -103,11 +104,58 @@ BusyBee OAuth Setup (Automated)
     }
 }
 
+class CleanSync : CliktCommand(name = "clean") {
+    private val configPath: String by requireObject()
+    private val force: Boolean by option("-f", "--force", help = "Skip confirmation prompt").flag(default = false)
+    private val dryRun: Boolean by option("-n", "--dry-run", help = "Show what would be deleted without deleting").flag(default = false)
+
+    override fun run() {
+        echo("Loading config from $configPath...")
+        val config = ConfigLoader.load(configPath)
+
+        val engine = SyncEngine(config, configPath)
+
+        try {
+            val events = engine.removeAllSyncedEvents(dryRun = true)
+
+            if (dryRun) {
+                echo("Dry-run: Would delete ${events.size} synced event(s):")
+                echo("")
+                for (event in events) {
+                    echo("  - [${event.calendarId}] ${event.summary}")
+                    echo("    ${event.start} - ${event.end}")
+                }
+                return
+            }
+
+            if (!force) {
+                echo("This will delete ALL synced events (events with prefix '${config.sync.prefix}') from all calendars.")
+                echo("Found ${events.size} event(s) to delete.")
+                echo("The state.json file will also be cleared.")
+                echo("")
+                echo("Are you sure? (yes/no): ")
+                val confirm = readLine()
+                if (confirm?.lowercase() != "yes") {
+                    echo("Cancelled.")
+                    return
+                }
+            }
+
+            echo("Removing all synced events...")
+            engine.removeAllSyncedEvents(dryRun = false)
+            echo("Successfully removed ${events.size} synced event(s) and cleared state.")
+        } catch (e: Exception) {
+            echo("Clean failed: ${e.message}", err = true)
+        }
+    }
+}
+
 fun main(args: Array<String>) {
     BusyBee().subcommands(
         Sync(),
         RunDaemon(),
         TokenHelp(),
-        Configure()
+        Configure(),
+        CleanSync()
     ).main(args)
 }

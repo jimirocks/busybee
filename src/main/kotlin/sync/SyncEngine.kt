@@ -54,6 +54,58 @@ class SyncEngine(private val config: Config, configPath: String) {
             doSync()
         }
     }
+
+    fun removeAllSyncedEvents(dryRun: Boolean = false): List<CalendarEvent> {
+        return runBlocking {
+            doClean(dryRun)
+        }
+    }
+
+    private suspend fun doClean(dryRun: Boolean): List<CalendarEvent> {
+        logger.info { if (dryRun) "Starting dry-run clean" else "Starting clean - removing all synced events" }
+        val now = Clock.System.now()
+        val timeMin = now.minus(7.days)
+        val timeMax = now.plus(30.days)
+
+        val allPrefixes = config.calendars.map { effectivePrefix(it.id) }.toSet()
+        val eventsToDelete = mutableListOf<CalendarEvent>()
+        var deletedCount = 0
+
+        for (cal in config.calendars) {
+            val client = clients[cal.id]!!
+
+            val events = fetchEvents(cal, timeMin, timeMax)
+            val syncedEvents = events.filter { event ->
+                allPrefixes.any { prefix -> event.summary.startsWith(prefix) }
+            }
+
+            for (event in syncedEvents) {
+                eventsToDelete.add(event)
+                if (!dryRun) {
+                    try {
+                        when (client) {
+                            is GoogleCalendarClient -> safeGoogleCall { client.deleteEvent(event.id) }
+                            is CalDavClient -> client.deleteEvent(event.id)
+                        }
+                        logger.debug { "Deleted synced event on ${cal.id}: ${event.id}" }
+                        deletedCount++
+                    } catch (e: Exception) {
+                        logger.error(e) { "Failed to delete synced event on ${cal.id}: ${event.id}" }
+                    }
+                }
+            }
+        }
+
+        if (!dryRun) {
+            state.clear()
+            saveState()
+            logger.info { "Clean completed - deleted $deletedCount events and cleared state" }
+        } else {
+            logger.info { "Dry-run completed - would delete ${eventsToDelete.size} events" }
+        }
+
+        return eventsToDelete
+    }
     
     private suspend fun doSync() {
         logger.info { "Starting sync" }

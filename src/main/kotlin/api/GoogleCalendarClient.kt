@@ -37,9 +37,6 @@ class GoogleCalendarClient(
             .execute()
         
         return events.items?.mapNotNull { e ->
-            if (e.status != "confirmed") return@mapNotNull null
-            val myResponse = e.attendees?.find { it.self == true }?.responseStatus
-            if (myResponse != "accepted") return@mapNotNull null
             val startTime = e.start.dateTime?.toString() ?: return@mapNotNull null
             val endTime = e.end.dateTime?.toString() ?: return@mapNotNull null
             GoogleEvent(
