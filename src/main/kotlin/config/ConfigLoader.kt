@@ -4,7 +4,16 @@ import org.yaml.snakeyaml.Yaml
 import java.io.File
 
 object ConfigLoader {
-    fun load(path: String = "config.yaml"): Config {
+    private const val APP_NAME = "busybee"
+    private const val CONFIG_FILE = "config.yaml"
+
+    fun getDefaultConfigPath(): String {
+        val configHome = System.getenv("XDG_CONFIG_HOME")?.takeIf { it.isNotBlank() }
+            ?: File(System.getProperty("user.home"), ".config").absolutePath
+        return File(configHome, "$APP_NAME/$CONFIG_FILE").absolutePath
+    }
+
+    fun load(path: String = getDefaultConfigPath()): Config {
         val yaml = Yaml()
         val input = File(path).readText()
         val map = yaml.load<Map<String, Any>>(input)

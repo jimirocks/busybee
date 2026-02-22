@@ -1,6 +1,7 @@
 package rocks.jimi.busybee
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.requireObject
 import kotlinx.coroutines.runBlocking
 import rocks.jimi.busybee.api.GoogleCalendarService
 import rocks.jimi.busybee.cli.ConfigSerializer
@@ -19,14 +20,18 @@ class Configure : CliktCommand(name = "configure") {
 
     private val inputReader = InputReader()
     private val consoleUI = ConsoleUI()
-    private val configSerializer = ConfigSerializer()
     private val oauthHandler = OAuthHandler()
     private val googleCalendarService = GoogleCalendarService()
 
+    private val configPath: String by requireObject()
+    private val configSerializer: ConfigSerializer get() = ConfigSerializer(configPath)
+    private val tokenDir: String get() = ConfigSerializer.getDefaultTokenDir()
+
     override fun run() {
         println("=== BusyBee Configuration ===\n")
+        println("Config path: $configPath\n")
 
-        val configFile = File("config.yaml")
+        val configFile = File(configPath)
 
         var config = if (configFile.exists()) {
             try {
@@ -62,7 +67,7 @@ class Configure : CliktCommand(name = "configure") {
         return when {
             config != null && config.oauth != null -> {
                 configSerializer.save(config)
-                println("\nConfiguration saved to config.yaml")
+                println("\nConfiguration saved to $configPath")
                 println("Run 'busybee sync' to test or 'busybee run' to start daemon")
                 true
             }
@@ -92,7 +97,7 @@ class Configure : CliktCommand(name = "configure") {
         val confirm = inputReader.readLine(listOf("y", "n", "Y", "N"))
         return if (confirm.lowercase() == "y") {
             configFile.delete()
-            File("tokens").listFiles()?.forEach { it.delete() }
+            File(tokenDir).listFiles()?.forEach { it.delete() }
             println("Configuration cleared. Starting fresh...")
             null
         } else {
@@ -148,7 +153,7 @@ class Configure : CliktCommand(name = "configure") {
             "google"
         )
 
-        val tokenFile = File("tokens", "$accountName.json")
+        val tokenFile = File(tokenDir, "$accountName.json")
         if (tokenFile.exists()) {
             println("Token already exists for '$accountName'.")
             println("Re-authorize? (y/n)")

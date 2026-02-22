@@ -8,7 +8,15 @@ import rocks.jimi.busybee.config.OAuthConfig
 import rocks.jimi.busybee.config.SyncConfig
 import java.io.File
 
-class ConfigSerializer(private val path: String = "config.yaml") {
+class ConfigSerializer(private val path: String = rocks.jimi.busybee.config.ConfigLoader.getDefaultConfigPath()) {
+
+    companion object {
+        fun getDefaultTokenDir(): String {
+            val configHome = System.getenv("XDG_CONFIG_HOME")?.takeIf { it.isNotBlank() }
+                ?: File(System.getProperty("user.home"), ".config").absolutePath
+            return File(configHome, "busybee/tokens").absolutePath
+        }
+    }
 
     fun save(config: Config) {
         val yaml = Yaml()
@@ -42,7 +50,9 @@ class ConfigSerializer(private val path: String = "config.yaml") {
         }
 
         val yamlStr = yaml.dump(map)
-        File(path).writeText(yamlStr)
+        val file = File(path)
+        file.parentFile?.mkdirs()
+        file.writeText(yamlStr)
     }
 
     fun load(): Config {

@@ -2,7 +2,6 @@
 build/
 calsync.jar
 tokens/
-config.yaml
 client_secret_*.json
 *.iml
 .idea/

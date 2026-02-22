@@ -4,20 +4,30 @@ import rocks.jimi.busybee.config.ConfigLoader
 import rocks.jimi.busybee.sync.AlertService
 import rocks.jimi.busybee.sync.SyncEngine
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.findOrSetObject
 import com.github.ajalt.clikt.core.main
+import com.github.ajalt.clikt.core.requireObject
 import com.github.ajalt.clikt.core.subcommands
+import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.option
 import rocks.jimi.busybee.config.AlertConfig
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class BusyBee : CliktCommand() {
-    override fun run() {}
+    private val configPath: String by option("-c", "--config", help = "Path to config file")
+        .default(ConfigLoader.getDefaultConfigPath())
+
+    override fun run() {
+        currentContext.findOrSetObject { configPath }
+    }
 }
 
 class Sync : CliktCommand(name = "sync") {
+    private val configPath: String by requireObject()
     override fun run() {
-        echo("Loading config...")
-        val config = ConfigLoader.load()
+        echo("Loading config from $configPath...")
+        val config = ConfigLoader.load(configPath)
         
         echo("Running sync...")
         val engine = SyncEngine(config)
@@ -34,9 +44,10 @@ class Sync : CliktCommand(name = "sync") {
 }
 
 class RunDaemon : CliktCommand(name = "run") {
+    private val configPath: String by requireObject()
     override fun run() {
-        echo("Loading config...")
-        val config = ConfigLoader.load()
+        echo("Loading config from $configPath...")
+        val config = ConfigLoader.load(configPath)
         
         val interval = config.sync.intervalMinutes.toLong()
         echo("Starting BusyBee daemon (sync every $interval minutes)...")
