@@ -5,9 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=jimi
-WorkingDirectory=/home/jimi/devP/home/busybee
-ExecStart=/home/jimi/devP/home/busybee/scripts/busybee.sh
+User=%u
+WorkingDirectory=%h/busybee
+ExecStart=/bin/bash %h/busybee/scripts/busybee.sh
 Restart=on-failure
 RestartSec=60
 

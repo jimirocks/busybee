@@ -1,3 +1,4 @@
 #!/bin/bash
-cd /home/jimi/devP/home/busybee
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 exec java -jar busybee.jar sync
