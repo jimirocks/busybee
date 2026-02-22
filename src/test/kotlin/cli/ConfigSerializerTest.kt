@@ -36,7 +36,7 @@ class ConfigSerializerTest : StringSpec({
                     password = "pass123"
                 )
             ),
-            sync = SyncConfig(intervalMinutes = 30, prefix = "[BB]"),
+            sync = SyncConfig(intervalMinutes = 30, prefix = "BB"),
             oauth = OAuthConfig(clientId = "test-client-id", clientSecret = "test-secret")
         )
 
@@ -55,7 +55,7 @@ class ConfigSerializerTest : StringSpec({
         loaded.calendars[1].username shouldBe "user"
 
         loaded.sync.intervalMinutes shouldBe 30
-        loaded.sync.prefix shouldBe "[BB]"
+        loaded.sync.prefix shouldBe "BB"
 
         loaded.oauth?.clientId shouldBe "test-client-id"
         loaded.oauth?.clientSecret shouldBe "test-secret"
@@ -74,7 +74,7 @@ class ConfigSerializerTest : StringSpec({
 
         loaded.calendars.isEmpty() shouldBe true
         loaded.sync.intervalMinutes shouldBe 15
-        loaded.sync.prefix shouldBe "[BB]"
+        loaded.sync.prefix shouldBe "BB"
         loaded.oauth shouldBe null
 
         tempFile.delete()

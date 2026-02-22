@@ -37,9 +37,9 @@ class SyncEngine(private val config: Config, configPath: String) {
     private fun effectivePrefix(calId: String): String {
         val cal = config.calendars.find { it.id == calId }
         return if (cal?.shortcut != null) {
-            "$prefix-${cal.shortcut}"
+            "[$prefix-${cal.shortcut}]"
         } else {
-            prefix
+            "[$prefix]"
         }
     }
     

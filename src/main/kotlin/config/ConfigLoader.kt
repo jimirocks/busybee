@@ -34,7 +34,7 @@ object ConfigLoader {
         val sync = (map["sync"] as? Map<String, Any>)?.let { syncMap ->
             SyncConfig(
                 intervalMinutes = (syncMap["intervalMinutes"] as? Int) ?: 15,
-                prefix = (syncMap["prefix"] as? String) ?: "[BB]"
+                prefix = (syncMap["prefix"] as? String) ?: "BB"
             )
         } ?: SyncConfig()
         

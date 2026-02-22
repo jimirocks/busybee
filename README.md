@@ -88,7 +88,7 @@ sudo systemctl enable --now busybee.timer
 | Option | Description | Default |
 |--------|-------------|---------|
 | `intervalMinutes` | Sync interval | 15 |
-| `prefix` | Sync event prefix | "[BB]" |
+| `prefix` | Sync event prefix | "BB" |
 
 ## How It Works
 
