@@ -34,9 +34,19 @@ class GoogleCalendarClient(
             .setTimeMin(com.google.api.client.util.DateTime(timeMin.toString()))
             .setTimeMax(com.google.api.client.util.DateTime(timeMax.toString()))
             .setSingleEvents(true)
+            .setMaxAttendees(2500)
             .execute()
         
         return events.items?.mapNotNull { e ->
+            if (e.status != "confirmed") return@mapNotNull null
+            if (e.attendeesOmitted == true) return@mapNotNull null
+            
+            val isOrganizer = e.organizer?.self == true
+            if (!isOrganizer) {
+                val myResponse = e.attendees?.find { it.self == true }?.responseStatus
+                if (myResponse != "accepted") return@mapNotNull null
+            }
+            
             val startTime = e.start.dateTime?.toString() ?: return@mapNotNull null
             val endTime = e.end.dateTime?.toString() ?: return@mapNotNull null
             GoogleEvent(
