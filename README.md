@@ -88,13 +88,13 @@ sudo systemctl enable --now busybee.timer
 | Option | Description | Default |
 |--------|-------------|---------|
 | `intervalMinutes` | Sync interval | 15 |
-| `prefix` | Sync event prefix | "[SYNC]" |
+| `prefix` | Sync event prefix | "[BB]" |
 
 ## How It Works
 
 1. Fetches events from all configured calendars
 2. Identifies "original" events (not synced)
-3. Creates "[SYNC] <summary>" placeholder events in all other calendars
+3. Creates "[BB-<shortcut>] <summary>" placeholder events in all other calendars
 4. On original event update: updates all synced blocks
 5. On original event delete: removes all synced blocks
 

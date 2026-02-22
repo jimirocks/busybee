@@ -32,7 +32,7 @@ class ConsoleUI {
         }
 
         val sync = config?.sync
-        println("Sync: every ${sync?.intervalMinutes ?: 15} minutes, prefix: '${sync?.prefix ?: "[SYNC]"}'")
+        println("Sync: every ${sync?.intervalMinutes ?: 15} minutes, prefix: '${sync?.prefix ?: "[BB]"}'")
 
         println("")
         println("Options:")

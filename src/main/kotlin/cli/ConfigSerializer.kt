@@ -76,7 +76,7 @@ class ConfigSerializer(private val path: String = rocks.jimi.busybee.config.Conf
         val sync = (map["sync"] as? Map<String, Any>)?.let { syncMap ->
             SyncConfig(
                 intervalMinutes = (syncMap["intervalMinutes"] as? Int) ?: 15,
-                prefix = (syncMap["prefix"] as? String) ?: "[SYNC]"
+                prefix = (syncMap["prefix"] as? String) ?: "[BB]"
             )
         } ?: SyncConfig()
         

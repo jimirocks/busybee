@@ -32,7 +32,7 @@ data class OAuthConfig(
 @Serializable
 data class SyncConfig(
     val intervalMinutes: Int = 15,
-    val prefix: String = "[SYNC]"
+    val prefix: String = "[BB]"
 )
 
 @Serializable

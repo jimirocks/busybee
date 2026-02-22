@@ -37,7 +37,7 @@ class EventSerializerTest : StringSpec({
     "serialize and deserialize roundtrip preserves CalendarEvent with syncId" {
         val event = CalendarEvent(
             id = "sync-event-456",
-            summary = "[SYNC] Team Meeting",
+            summary = "[BB] Team Meeting",
             description = null,
             start = Instant.parse("2024-01-15T14:30:00Z"),
             end = Instant.parse("2024-01-15T15:30:00Z"),
