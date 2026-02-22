@@ -1,10 +1,10 @@
-package rocks.jimi.calsync.api
+package rocks.jimi.busybee.api
 
 import com.google.auth.oauth2.UserCredentials
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import rocks.jimi.calsync.config.CalendarConfig
+import rocks.jimi.busybee.config.CalendarConfig
 import java.io.File
 import java.util.Date
 

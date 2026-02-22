@@ -1,13 +1,13 @@
 [Unit]
-Description=CalSync - Universal Calendar Sync Engine
+Description=BusyBee - Universal Calendar Sync Engine
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=jimi
-WorkingDirectory=/home/jimi/devP/home/calsync
-ExecStart=/home/jimi/devP/home/calsync/scripts/calsync.sh
+WorkingDirectory=/home/jimi/devP/home/busybee
+ExecStart=/home/jimi/devP/home/busybee/scripts/busybee.sh
 Restart=on-failure
 RestartSec=60
 

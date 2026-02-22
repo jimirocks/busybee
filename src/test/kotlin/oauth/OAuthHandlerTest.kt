@@ -1,4 +1,4 @@
-package rocks.jimi.calsync.oauth
+package rocks.jimi.busybee.oauth
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe

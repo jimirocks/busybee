@@ -1,4 +1,4 @@
-package rocks.jimi.calsync.cli
+package rocks.jimi.busybee.cli
 
 class InputReader(
     private val inputProvider: () -> String = { readLine()!! }

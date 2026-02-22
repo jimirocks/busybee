@@ -1,16 +1,16 @@
-package rocks.jimi.calsync
+package rocks.jimi.busybee
 
-import rocks.jimi.calsync.config.ConfigLoader
-import rocks.jimi.calsync.sync.AlertService
-import rocks.jimi.calsync.sync.SyncEngine
+import rocks.jimi.busybee.config.ConfigLoader
+import rocks.jimi.busybee.sync.AlertService
+import rocks.jimi.busybee.sync.SyncEngine
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
-import rocks.jimi.calsync.config.AlertConfig
+import rocks.jimi.busybee.config.AlertConfig
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-class CalSync : CliktCommand() {
+class BusyBee : CliktCommand() {
     override fun run() {}
 }
 
@@ -39,7 +39,7 @@ class RunDaemon : CliktCommand(name = "run") {
         val config = ConfigLoader.load()
         
         val interval = config.sync.intervalMinutes.toLong()
-        echo("Starting CalSync daemon (sync every $interval minutes)...")
+        echo("Starting BusyBee daemon (sync every $interval minutes)...")
         
         val engine = SyncEngine(config)
         val alertService = AlertService(config.alerts ?: AlertConfig())
@@ -71,7 +71,7 @@ class RunDaemon : CliktCommand(name = "run") {
 class TokenHelp : CliktCommand(name = "token") {
     override fun run() {
         echo("""
-CalSync OAuth Setup (Automated)
+BusyBee OAuth Setup (Automated)
 ==============================
 
 1. Create OAuth credentials (one-time):
@@ -93,7 +93,7 @@ CalSync OAuth Setup (Automated)
 }
 
 fun main(args: Array<String>) {
-    CalSync().subcommands(
+    BusyBee().subcommands(
         Sync(),
         RunDaemon(),
         TokenHelp(),

@@ -1,4 +1,4 @@
-# CalSync - Universal Calendar Sync Engine
+# BusyBee - Universal Calendar Sync Engine
 
 Automated calendar synchronization that mirrors "busy" time slots across multiple calendars to prevent double-booking.
 
@@ -28,7 +28,7 @@ Automated calendar synchronization that mirrors "busy" time slots across multipl
 ### 2. Configure
 
 ```bash
-java -jar calsync.jar configure
+java -jar busybee.jar configure
 ```
 
 The wizard will guide you through:
@@ -41,8 +41,8 @@ The wizard will guide you through:
 ### 3. Run
 
 ```bash
-java -jar calsync.jar sync   # Run once
-java -jar calsync.jar run    # Run as daemon
+java -jar busybee.jar sync   # Run once
+java -jar busybee.jar run    # Run as daemon
 ```
 
 ## Getting OAuth Credentials (One-time)
@@ -59,7 +59,7 @@ That's it! The configure wizard handles the rest automatically.
 For Infomaniak, IceWarp, or other CalDAV providers:
 
 ```bash
-java -jar calsync.jar configure
+java -jar busybee.jar configure
 ```
 
 Select "Generic CalDAV" and provide URL, username, password.
@@ -67,10 +67,10 @@ Select "Generic CalDAV" and provide URL, username, password.
 ## Systemd Setup (Linux)
 
 ```bash
-sudo cp src/scripts/calsync.service /etc/systemd/system/
-sudo cp src/scripts/calsync.timer /etc/systemd/system/
+sudo cp src/scripts/busybee.service /etc/systemd/system/
+sudo cp src/scripts/busybee.timer /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now calsync.timer
+sudo systemctl enable --now busybee.timer
 ```
 
 ## Configuration Options

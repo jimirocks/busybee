@@ -1,16 +1,16 @@
-package rocks.jimi.calsync
+package rocks.jimi.busybee
 
 import com.github.ajalt.clikt.core.CliktCommand
 import kotlinx.coroutines.runBlocking
-import rocks.jimi.calsync.api.GoogleCalendarService
-import rocks.jimi.calsync.cli.ConfigSerializer
-import rocks.jimi.calsync.cli.ConsoleUI
-import rocks.jimi.calsync.cli.InputReader
-import rocks.jimi.calsync.config.CalendarConfig
-import rocks.jimi.calsync.config.Config
-import rocks.jimi.calsync.config.OAuthConfig
-import rocks.jimi.calsync.config.SyncConfig
-import rocks.jimi.calsync.oauth.OAuthHandler
+import rocks.jimi.busybee.api.GoogleCalendarService
+import rocks.jimi.busybee.cli.ConfigSerializer
+import rocks.jimi.busybee.cli.ConsoleUI
+import rocks.jimi.busybee.cli.InputReader
+import rocks.jimi.busybee.config.CalendarConfig
+import rocks.jimi.busybee.config.Config
+import rocks.jimi.busybee.config.OAuthConfig
+import rocks.jimi.busybee.config.SyncConfig
+import rocks.jimi.busybee.oauth.OAuthHandler
 import java.awt.Desktop
 import java.io.File
 import java.net.URI
@@ -24,7 +24,7 @@ class Configure : CliktCommand(name = "configure") {
     private val googleCalendarService = GoogleCalendarService()
 
     override fun run() {
-        println("=== CalSync Configuration ===\n")
+        println("=== BusyBee Configuration ===\n")
 
         val configFile = File("config.yaml")
 
@@ -63,7 +63,7 @@ class Configure : CliktCommand(name = "configure") {
             config != null && config.oauth != null -> {
                 configSerializer.save(config)
                 println("\nConfiguration saved to config.yaml")
-                println("Run 'calsync sync' to test or 'calsync run' to start daemon")
+                println("Run 'busybee sync' to test or 'busybee run' to start daemon")
                 true
             }
             config != null && config.calendars.isNotEmpty() -> {
@@ -185,12 +185,12 @@ class Configure : CliktCommand(name = "configure") {
         }
 
         val refreshToken = when (tokenResult) {
-            is rocks.jimi.calsync.oauth.OAuthTokenResult.Success -> tokenResult.refreshToken
-            is rocks.jimi.calsync.oauth.OAuthTokenResult.InvalidGrant -> {
+            is rocks.jimi.busybee.oauth.OAuthTokenResult.Success -> tokenResult.refreshToken
+            is rocks.jimi.busybee.oauth.OAuthTokenResult.InvalidGrant -> {
                 println("Error: Invalid authorization code. Please try again.")
                 return config
             }
-            is rocks.jimi.calsync.oauth.OAuthTokenResult.Error -> {
+            is rocks.jimi.busybee.oauth.OAuthTokenResult.Error -> {
                 println("Error: ${tokenResult.message}")
                 return config
             }

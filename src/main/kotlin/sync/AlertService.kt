@@ -1,6 +1,6 @@
-package rocks.jimi.calsync.sync
+package rocks.jimi.busybee.sync
 
-import rocks.jimi.calsync.config.AlertConfig
+import rocks.jimi.busybee.config.AlertConfig
 
 class AlertService(private val config: AlertConfig) {
     
@@ -33,10 +33,10 @@ class AlertService(private val config: AlertConfig) {
     }
     
     fun sendSyncFailureAlert(error: String) {
-        sendAlert("CalSync Alert: Sync Failed", "Synchronization failed with error: $error")
+        sendAlert("BusyBee Alert: Sync Failed", "Synchronization failed with error: $error")
     }
     
     fun sendSyncSuccessAlert(eventsProcessed: Int) {
-        sendAlert("CalSync: Sync Completed", "Processed $eventsProcessed events successfully.")
+        sendAlert("BusyBee: Sync Completed", "Processed $eventsProcessed events successfully.")
     }
 }

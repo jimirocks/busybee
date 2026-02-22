@@ -1,11 +1,11 @@
-package rocks.jimi.calsync.api
+package rocks.jimi.busybee.api
 
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.calendar.Calendar
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.UserCredentials
-import rocks.jimi.calsync.cli.GoogleCalendarInfo
+import rocks.jimi.busybee.cli.GoogleCalendarInfo
 
 class GoogleCalendarService {
 
@@ -26,7 +26,7 @@ class GoogleCalendarService {
             val requestInitializer = HttpCredentialsAdapter(credentials)
 
             val service = Calendar.Builder(httpTransport, jsonFactory, requestInitializer)
-                .setApplicationName("CalSync")
+                .setApplicationName("BusyBee")
                 .build()
 
             val list = service.calendarList().list().execute()

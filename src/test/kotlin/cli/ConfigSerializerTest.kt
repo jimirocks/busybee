@@ -1,11 +1,11 @@
-package rocks.jimi.calsync.cli
+package rocks.jimi.busybee.cli
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe
-import rocks.jimi.calsync.config.CalendarConfig
-import rocks.jimi.calsync.config.Config
-import rocks.jimi.calsync.config.OAuthConfig
-import rocks.jimi.calsync.config.SyncConfig
+import rocks.jimi.busybee.config.CalendarConfig
+import rocks.jimi.busybee.config.Config
+import rocks.jimi.busybee.config.OAuthConfig
+import rocks.jimi.busybee.config.SyncConfig
 import java.io.File
 
 class ConfigSerializerTest : StringSpec({

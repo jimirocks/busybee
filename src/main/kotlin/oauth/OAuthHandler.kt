@@ -1,4 +1,4 @@
-package rocks.jimi.calsync.oauth
+package rocks.jimi.busybee.oauth
 
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*

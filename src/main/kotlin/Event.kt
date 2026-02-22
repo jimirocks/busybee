@@ -1,4 +1,4 @@
-package rocks.jimi.calsync
+package rocks.jimi.busybee
 
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant

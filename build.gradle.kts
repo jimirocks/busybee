@@ -46,13 +46,13 @@ tasks.test {
 }
 
 tasks.register<Jar>("fatJar") {
-    archiveBaseName.set("calsync")
+    archiveBaseName.set("busybee")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(sourceSets.main.get().output)
     from({
         configurations.runtimeClasspath.get().map { zipTree(it) }
     })
     manifest {
-        attributes["Main-Class"] = "rocks.jimi.calsync.MainKt"
+        attributes["Main-Class"] = "rocks.jimi.busybee.MainKt"
     }
 }

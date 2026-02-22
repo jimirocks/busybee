@@ -1,4 +1,4 @@
-package rocks.jimi.calsync
+package rocks.jimi.busybee
 
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.shouldBe

@@ -1,4 +1,4 @@
-package rocks.jimi.calsync.config
+package rocks.jimi.busybee.config
 
 import org.yaml.snakeyaml.Yaml
 import java.io.File

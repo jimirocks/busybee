@@ -1,1 +1,1 @@
-rootProject.name = "calsync"
+rootProject.name = "busybee"

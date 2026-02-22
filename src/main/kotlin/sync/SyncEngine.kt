@@ -1,16 +1,16 @@
-package rocks.jimi.calsync.sync
+package rocks.jimi.busybee.sync
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import rocks.jimi.calsync.CalendarEvent
-import rocks.jimi.calsync.SyncState
-import rocks.jimi.calsync.api.CalDavClient
-import rocks.jimi.calsync.api.GoogleCalendarClient
-import rocks.jimi.calsync.api.TokenManager
-import rocks.jimi.calsync.config.CalendarConfig
-import rocks.jimi.calsync.config.Config
+import rocks.jimi.busybee.CalendarEvent
+import rocks.jimi.busybee.SyncState
+import rocks.jimi.busybee.api.CalDavClient
+import rocks.jimi.busybee.api.GoogleCalendarClient
+import rocks.jimi.busybee.api.TokenManager
+import rocks.jimi.busybee.config.CalendarConfig
+import rocks.jimi.busybee.config.Config
 import java.io.File
 import java.util.*
 import kotlin.time.Clock

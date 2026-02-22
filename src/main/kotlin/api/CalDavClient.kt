@@ -1,10 +1,10 @@
-package rocks.jimi.calsync.api
+package rocks.jimi.busybee.api
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
-import rocks.jimi.calsync.config.CalendarConfig
+import rocks.jimi.busybee.config.CalendarConfig
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
@@ -51,7 +51,7 @@ class CalDavClient(private val config: CalendarConfig) {
     suspend fun createEvent(uid: String, summary: String, description: String?, start: Instant, end: Instant): String {
         val ics = """BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//CalSync//EN
+PRODID:-//BusyBee//EN
 BEGIN:VEVENT
 UID:$uid
 DTSTAMP:${formatICalInstant(Clock.System.now())}
@@ -79,7 +79,7 @@ END:VCALENDAR""".trimIndent()
     suspend fun updateEvent(eventId: String, summary: String, description: String?, start: Instant, end: Instant) {
         val ics = """BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//CalSync//EN
+PRODID:-//BusyBee//EN
 BEGIN:VEVENT
 UID:$eventId
 DTSTAMP:${formatICalInstant(Clock.System.now())}

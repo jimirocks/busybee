@@ -1,5 +1,5 @@
 [Unit]
-Description=CalSync Timer - Run sync every 15 minutes
+Description=BusyBee Timer - Run sync every 15 minutes
 
 [Timer]
 OnBootSec=1min

@@ -1,10 +1,10 @@
-# AGENTS.md - CalSync Development Guide
+# AGENTS.md - BusyBee Development Guide
 
-This file provides guidelines for agentic coding agents working on the CalSync project.
+This file provides guidelines for agentic coding agents working on the BusyBee project.
 
 ## Project Overview
 
-CalSync is a universal calendar sync engine that mirrors "busy" time slots across multiple Google Calendars and CalDAV calendars. Built with Kotlin/JVM 21+ using Gradle as the build tool.
+BusyBee is a universal calendar sync engine that mirrors "busy" time slots across multiple Google Calendars and CalDAV calendars. Built with Kotlin/JVM 21+ using Gradle as the build tool.
 
 ## Build Commands
 
@@ -16,10 +16,10 @@ CalSync is a universal calendar sync engine that mirrors "busy" time slots acros
 ./gradlew test
 
 # Run a single test class
-./gradlew test --tests "rocks.jimi.calsync.cli.InputReaderTest"
+./gradlew test --tests "rocks.jimi.busybee.cli.InputReaderTest"
 
 # Run a single test method
-./gradlew test --tests "rocks.jimi.calsync.cli.InputReaderTest.readLine returns input when no validation required"
+./gradlew test --tests "rocks.jimi.busybee.cli.InputReaderTest.readLine returns input when no validation required"
 
 # Create executable JAR (includes all dependencies)
 ./gradlew fatJar
@@ -36,9 +36,11 @@ CalSync is a universal calendar sync engine that mirrors "busy" time slots acros
 
 ## Project Structure
 
-- **Root package** (`rocks.jimi.calsync`): files directly in `src/main/kotlin/`
+- **Root package** (`rocks.jimi.busybee`): Kotlin files directly in `src/main/kotlin/` (flat structure, no subdirectory for root package)
 - **Subpackages**: directories under `src/main/kotlin/` (e.g., `cli/`, `api/`, `config/`, `sync/`, `oauth/`)
 - **Tests**: mirror main structure in `src/test/kotlin/`
+
+> **Important**: This project uses a **flat package structure** for the root package. Files in `src/main/kotlin/` belong to `rocks.jimi.busybee` (not `rocks.jimi.busybee.*`). Only subdirectories become subpackages.
 
 ## Code Style Guidelines
 
@@ -63,7 +65,7 @@ Order imports as follows (no blank lines between groups):
 1. Kotlin standard library (`kotlin.*`)
 2. kotlinx libraries (`kotlinx.*`)
 3. Third-party libraries (external Maven packages)
-4. Project internal imports (`rocks.jimi.calsync.*`)
+4. Project internal imports (`rocks.jimi.busybee.*`)
 
 ### Types and Serialization
 
@@ -155,7 +157,7 @@ data class CalendarConfig(
 
 ```bash
 ./gradlew fatJar
-java -jar build/libs/calsync.jar configure
-java -jar build/libs/calsync.jar sync   # Run once
-java -jar build/libs/calsync.jar run    # Run as daemon
+java -jar build/libs/busybee.jar configure
+java -jar build/libs/busybee.jar sync   # Run once
+java -jar build/libs/busybee.jar run    # Run as daemon
 ```
