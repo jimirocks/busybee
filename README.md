@@ -1,5 +1,7 @@
 # BusyBee - Universal Calendar Sync Engine
 
+> **⚠️ Experimental** - This project is under active development. Use with care in production.
+
 Automated calendar synchronization that mirrors "busy" time slots across multiple calendars to prevent double-booking.
 
 ## Features
@@ -11,7 +13,11 @@ Automated calendar synchronization that mirrors "busy" time slots across multipl
 - Event lifecycle management (create, update, delete)
 - Infinite loop prevention with sync markers
 - Configurable sync interval
-- Email alerts on sync failure
+
+## Unfinished / Experimental Features
+
+- **Daemon mode** (`java -jar busybee.jar run`) - Has not been tested
+- **Email alerts** - Experimental, may be removed in a future release
 
 ## Requirements
 
@@ -42,7 +48,7 @@ The wizard will guide you through:
 
 ```bash
 java -jar busybee.jar sync   # Run once
-java -jar busybee.jar run    # Run as daemon
+java -jar busybee.jar run    # Run as daemon (untested)
 ```
 
 ## Getting OAuth Credentials (One-time)
@@ -64,7 +70,7 @@ java -jar busybee.jar configure
 
 Select "Generic CalDAV" and provide URL, username, password.
 
-## Systemd Setup (Linux)
+## Systemd Setup (Linux) - Untested
 
 ```bash
 sudo cp src/scripts/busybee.service /etc/systemd/system/
@@ -79,7 +85,6 @@ sudo systemctl enable --now busybee.timer
 |--------|-------------|---------|
 | `intervalMinutes` | Sync interval | 15 |
 | `prefix` | Sync event prefix | "[SYNC]" |
-| `alerts.enabled` | Enable email alerts | false |
 
 ## How It Works
 
