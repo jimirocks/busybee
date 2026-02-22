@@ -18,6 +18,12 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 class SyncEngine(private val config: Config, configPath: String) {
+
+    private fun isSyncIdPattern(description: String?): Boolean {
+        if (description == null) return false
+        val parts = description.split("_")
+        return parts.size >= 2 && parts[0].isNotBlank() && parts[1].isNotBlank()
+    }
     private val logger = KotlinLogging.logger { }
     private val prefix = config.sync.prefix
     private val tokenManagers = config.calendars
@@ -131,9 +137,10 @@ class SyncEngine(private val config: Config, configPath: String) {
     
     private suspend fun fetchEvents(cfg: CalendarConfig, timeMin: Instant, timeMax: Instant): List<CalendarEvent> {
         val client = clients[cfg.id]!!
-        val effPrefix = effectivePrefix(cfg.id)
         val events: List<CalendarEvent> = when (client) {
             is GoogleCalendarClient -> safeGoogleCall { client.listEvents(timeMin, timeMax) }.map { e ->
+                val syncIdCandidate = e.description
+                val hasSyncId = isSyncIdPattern(syncIdCandidate)
                 CalendarEvent(
                     id = e.id,
                     summary = e.summary,
@@ -141,11 +148,13 @@ class SyncEngine(private val config: Config, configPath: String) {
                     start = e.start,
                     end = e.end,
                     calendarId = cfg.id,
-                    isOriginal = !e.summary.startsWith(effPrefix),
-                    syncId = if (e.summary.startsWith(effPrefix)) e.description else null
+                    isOriginal = !hasSyncId,
+                    syncId = if (hasSyncId) syncIdCandidate else null
                 )
             }
             is CalDavClient -> safeCalDavCall { client.listEvents(timeMin, timeMax) }?.map { e ->
+                val syncIdCandidate = e.description
+                val hasSyncId = isSyncIdPattern(syncIdCandidate)
                 CalendarEvent(
                     id = e.id,
                     summary = e.summary,
@@ -153,8 +162,8 @@ class SyncEngine(private val config: Config, configPath: String) {
                     start = e.start,
                     end = e.end,
                     calendarId = cfg.id,
-                    isOriginal = !e.summary.startsWith(effPrefix),
-                    syncId = if (e.summary.startsWith(effPrefix)) e.description else null
+                    isOriginal = !hasSyncId,
+                    syncId = if (hasSyncId) syncIdCandidate else null
                 )
             } ?: emptyList()
             else -> emptyList()
