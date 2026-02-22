@@ -30,7 +30,7 @@ class Sync : CliktCommand(name = "sync") {
         val config = ConfigLoader.load(configPath)
         
         echo("Running sync...")
-        val engine = SyncEngine(config)
+        val engine = SyncEngine(config, configPath)
         val alertService = AlertService(config.alerts ?: AlertConfig())
         
         try {
@@ -52,7 +52,7 @@ class RunDaemon : CliktCommand(name = "run") {
         val interval = config.sync.intervalMinutes.toLong()
         echo("Starting BusyBee daemon (sync every $interval minutes)...")
         
-        val engine = SyncEngine(config)
+        val engine = SyncEngine(config, configPath)
         val alertService = AlertService(config.alerts ?: AlertConfig())
         
         val scheduler = Executors.newSingleThreadScheduledExecutor()

@@ -17,14 +17,14 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
-class SyncEngine(private val config: Config) {
+class SyncEngine(private val config: Config, configPath: String) {
     private val logger = KotlinLogging.logger { }
     private val prefix = config.sync.prefix
     private val tokenManagers = config.calendars
         .filter { it.type == "google" }
         .associate { it.id to TokenManager(it) }
     private val clients = config.calendars.associate { it.id to createClient(it) }
-    private val stateFile = "sync-state.json"
+    private val stateFile = File(configPath).resolveSibling("state.json").absolutePath
     private val json = Json { prettyPrint = true }
     private val state: MutableMap<String, SyncState> by lazy { loadState() }
 
