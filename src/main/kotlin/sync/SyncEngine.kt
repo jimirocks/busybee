@@ -17,12 +17,20 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
+object SyncIdPattern {
+    fun isMatch(description: String?, calendarIds: Set<String>): Boolean {
+        if (description == null) return false
+        // Check if description starts with any known calendar ID followed by underscore and has more content
+        return calendarIds.any { calId -> 
+            description.startsWith("${calId}_") && description.length > calId.length + 1
+        }
+    }
+}
+
 class SyncEngine(private val config: Config, configPath: String) {
 
     private fun isSyncIdPattern(description: String?): Boolean {
-        if (description == null) return false
-        val parts = description.split("_")
-        return parts.size >= 2 && parts[0].isNotBlank() && parts[1].isNotBlank()
+        return SyncIdPattern.isMatch(description, config.calendars.map { it.id }.toSet())
     }
     private val logger = KotlinLogging.logger { }
     private val prefix = config.sync.prefix

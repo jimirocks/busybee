@@ -21,23 +21,35 @@ class CalDavClient(private val config: CalendarConfig) {
     private val pass = config.password ?: throw IllegalArgumentException("CalDAV password required")
     
     suspend fun listEvents(timeMin: Instant, timeMax: Instant): List<CalDavEvent> {
-        val propfind = """<?xml version="1.0" encoding="utf-8" ?>
-            <D:propfind xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+        val report = """<?xml version="1.0" encoding="utf-8" ?>
+            <C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
                 <D:prop>
                     <C:calendar-data/>
                     <D:getetag/>
                 </D:prop>
-            </D:propfind>""".trimIndent()
+                <C:filter>
+                    <C:comp-filter name="VCALENDAR">
+                        <C:comp-filter name="VEVENT">
+                            <C:time-range start="${formatICalInstant(timeMin)}" end="${formatICalInstant(timeMax)}"/>
+                        </C:comp-filter>
+                    </C:comp-filter>
+                </C:filter>
+            </C:calendar-query>""".trimIndent()
+        
+        logger.debug { "Fetching CalDAV events from $baseUrl for range $timeMin to $timeMax" }
         
         val response = client.request(baseUrl) {
-            method = HttpMethod("PROPFIND")
+            method = HttpMethod("REPORT")
             basicAuth(user, pass)
             header("Depth", "1")
             header(HttpHeaders.ContentType, "application/xml; charset=utf-8")
-            setBody(propfind)
+            setBody(report)
         }
         
-        return parseCalDavResponse(response.bodyAsText(), timeMin, timeMax)
+        val events = parseCalDavResponse(response.bodyAsText(), timeMin, timeMax)
+        logger.debug { "Found ${events.size} CalDAV events" }
+        
+        return events
     }
     
     private fun formatICalInstant(instant: Instant): String {
