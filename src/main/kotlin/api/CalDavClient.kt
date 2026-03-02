@@ -74,6 +74,9 @@ class CalDavClient(private val config: CalendarConfig) {
             appendLine("DTSTART:${formatICalInstant(start)}")
             appendLine("DTEND:${formatICalInstant(end)}")
             if (classLine.isNotEmpty()) appendLine(classLine)
+            appendLine("BEGIN:VALARM")
+            appendLine("ACTION:NONE")
+            appendLine("END:VALARM")
             appendLine("END:VEVENT")
             appendLine("END:VCALENDAR")
         }
@@ -106,6 +109,9 @@ class CalDavClient(private val config: CalendarConfig) {
             appendLine("DTSTART:${formatICalInstant(start)}")
             appendLine("DTEND:${formatICalInstant(end)}")
             if (classLine.isNotEmpty()) appendLine(classLine)
+            appendLine("BEGIN:VALARM")
+            appendLine("ACTION:NONE")
+            appendLine("END:VALARM")
             appendLine("END:VEVENT")
             appendLine("END:VCALENDAR")
         }

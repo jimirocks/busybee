@@ -68,6 +68,8 @@ class GoogleCalendarClient(
                 .setDateTime(com.google.api.client.util.DateTime(start.toString()))
             this.end = com.google.api.services.calendar.model.EventDateTime()
                 .setDateTime(com.google.api.client.util.DateTime(end.toString()))
+            this.reminders = com.google.api.services.calendar.model.Event.Reminders()
+                .setUseDefault(false)
         }
         
         val created = service.events().insert(config.calendarId, event).execute()
@@ -83,6 +85,8 @@ class GoogleCalendarClient(
             .setDateTime(com.google.api.client.util.DateTime(start.toString()))
         event.end = com.google.api.services.calendar.model.EventDateTime()
             .setDateTime(com.google.api.client.util.DateTime(end.toString()))
+        event.reminders = com.google.api.services.calendar.model.Event.Reminders()
+            .setUseDefault(false)
         
         service.events().update(config.calendarId, eventId, event).execute()
     }
