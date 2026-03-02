@@ -30,9 +30,18 @@ class TokenManager(private val config: CalendarConfig) {
     
     fun refreshToken() {
         synchronized(this) {
-            val tokenData = loadTokenData()
-            credentials = createCredentials(tokenData)
-            credentials?.refresh()
+            try {
+                credentials?.refresh()
+            } catch (e: Exception) {
+                credentials = null
+                throw InvalidTokenException(config.id, "Refresh token expired or revoked. Please re-authorize with Google.")
+            }
+        }
+    }
+
+    fun clearCredentials() {
+        synchronized(this) {
+            credentials = null
         }
     }
     

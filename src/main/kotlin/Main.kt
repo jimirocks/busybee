@@ -1,5 +1,6 @@
 package rocks.jimi.busybee
 
+import rocks.jimi.busybee.cli.ReauthHelper
 import rocks.jimi.busybee.config.ConfigLoader
 import rocks.jimi.busybee.sync.AlertService
 import rocks.jimi.busybee.sync.SyncEngine
@@ -11,6 +12,7 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import rocks.jimi.busybee.api.InvalidTokenException
 import rocks.jimi.busybee.config.AlertConfig
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -26,6 +28,8 @@ class BusyBee : CliktCommand() {
 
 class Sync : CliktCommand(name = "sync") {
     private val configPath: String by requireObject()
+    private val reauth: Boolean by option("--reauth", help = "Re-authenticate with Google if token expired").flag(default = false)
+    
     override fun run() {
         echo("Loading config from $configPath...")
         val config = ConfigLoader.load(configPath)
@@ -37,6 +41,22 @@ class Sync : CliktCommand(name = "sync") {
         try {
             engine.runSync()
             echo("Sync completed successfully.")
+        } catch (e: InvalidTokenException) {
+            if (reauth && config.oauth != null) {
+                echo("Token expired for calendar '${e.calendarId}'. Re-authenticating...")
+                if (ReauthHelper.reauthorize(config.oauth, config.calendars)) {
+                    echo("Running sync again...")
+                    val newEngine = SyncEngine(config, configPath)
+                    newEngine.runSync()
+                    echo("Sync completed successfully.")
+                } else {
+                    echo("Re-authentication failed. Please run 'busybee configure' to set up OAuth.", err = true)
+                }
+            } else {
+                echo("Sync failed: ${e.message}", err = true)
+                echo("Run 'busybee sync --reauth' to re-authenticate with Google.", err = true)
+            }
+            alertService.sendSyncFailureAlert(e.message ?: "Token expired")
         } catch (e: Exception) {
             echo("Sync failed: ${e.message}", err = true)
             alertService.sendSyncFailureAlert(e.message ?: "Unknown error")
@@ -46,6 +66,8 @@ class Sync : CliktCommand(name = "sync") {
 
 class RunDaemon : CliktCommand(name = "run") {
     private val configPath: String by requireObject()
+    private val reauth: Boolean by option("--reauth", help = "Re-authenticate with Google if token expired").flag(default = false)
+    
     override fun run() {
         echo("Loading config from $configPath...")
         val config = ConfigLoader.load(configPath)
@@ -56,12 +78,32 @@ class RunDaemon : CliktCommand(name = "run") {
         val engine = SyncEngine(config, configPath)
         val alertService = AlertService(config.alerts ?: AlertConfig())
         
+        var needsReauth = reauth
+        
         val scheduler = Executors.newSingleThreadScheduledExecutor()
         scheduler.scheduleAtFixedRate({
             try {
+                if (needsReauth && config.oauth != null) {
+                    echo("Re-authenticating with Google...")
+                    if (ReauthHelper.reauthorize(config.oauth, config.calendars)) {
+                        needsReauth = false
+                        echo("Re-authentication successful.")
+                    } else {
+                        echo("Re-authentication failed.", err = true)
+                        return@scheduleAtFixedRate
+                    }
+                }
                 echo("Running sync...")
                 engine.runSync()
                 echo("Sync completed.")
+            } catch (e: InvalidTokenException) {
+                if (config.oauth != null) {
+                    echo("Token expired. Will re-authenticate on next sync...", err = true)
+                    needsReauth = true
+                } else {
+                    echo("Sync failed: ${e.message}", err = true)
+                }
+                alertService.sendSyncFailureAlert(e.message ?: "Token expired")
             } catch (e: Exception) {
                 echo("Sync failed: ${e.message}", err = true)
                 alertService.sendSyncFailureAlert(e.message ?: "Unknown error")

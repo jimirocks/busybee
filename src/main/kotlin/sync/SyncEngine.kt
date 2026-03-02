@@ -1,6 +1,7 @@
 package rocks.jimi.busybee.sync
 
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
+import com.google.api.client.http.HttpResponseException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -8,6 +9,7 @@ import rocks.jimi.busybee.CalendarEvent
 import rocks.jimi.busybee.SyncState
 import rocks.jimi.busybee.api.CalDavClient
 import rocks.jimi.busybee.api.GoogleCalendarClient
+import rocks.jimi.busybee.api.InvalidTokenException
 import rocks.jimi.busybee.api.TokenManager
 import rocks.jimi.busybee.config.CalendarConfig
 import rocks.jimi.busybee.config.Config
@@ -182,16 +184,44 @@ class SyncEngine(private val config: Config, configPath: String) {
     private fun <T> safeGoogleCall(block: () -> T): T {
         return try {
             block()
+        } catch (e: InvalidTokenException) {
+            throw e
+        } catch (e: HttpResponseException) {
+            if (e.statusCode == 400 || e.statusCode == 401 || e.message?.contains("invalid_grant") == true) {
+                val calendarId = findCalendarIdForGoogleClient()
+                throw InvalidTokenException(calendarId, "Token expired or revoked for calendar '$calendarId'. Please re-authenticate with Google.")
+            }
+            throw e
         } catch (e: GoogleJsonResponseException) {
-            if (e.statusCode == 401) {
-                tokenManagers.entries.find { (clients[it.key] as? GoogleCalendarClient) != null }?.let { (_, tm) ->
-                    tm.refreshToken()
+            if (e.statusCode == 401 || e.message?.contains("invalid_grant") == true) {
+                try {
+                    for ((calId, tm) in tokenManagers) {
+                        try {
+                            tm.refreshToken()
+                        } catch (re: Exception) {
+                            throw InvalidTokenException(calId, "Token expired or revoked for calendar '$calId'. Please re-authenticate with Google.")
+                        }
+                    }
+                    block()
+                } catch (refreshEx: Exception) {
+                    if (refreshEx is InvalidTokenException) throw refreshEx
+                    val calendarId = findCalendarIdForGoogleClient()
+                    throw InvalidTokenException(calendarId, "Token expired or revoked for calendar '$calendarId'. Please re-authenticate with Google.")
                 }
-                block()
             } else {
                 throw e
             }
+        } catch (e: Exception) {
+            if (e.message?.contains("invalid_grant") == true || e.message?.contains("Token has been expired") == true) {
+                val calendarId = findCalendarIdForGoogleClient()
+                throw InvalidTokenException(calendarId, "Token expired or revoked for calendar '$calendarId'. Please re-authenticate with Google.")
+            }
+            throw e
         }
+    }
+
+    private fun findCalendarIdForGoogleClient(): String {
+        return clients.entries.find { it.value is GoogleCalendarClient }?.key ?: "unknown"
     }
     
     private suspend fun <T> safeCalDavCall(block: suspend () -> T): T? {
