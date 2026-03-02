@@ -2,7 +2,11 @@ package rocks.jimi.busybee.api
 
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
+import com.google.api.client.util.DateTime
 import com.google.api.services.calendar.Calendar
+import com.google.api.services.calendar.model.Event
+import com.google.api.services.calendar.model.EventDateTime
+import com.google.api.services.calendar.model.Event.Reminders
 import com.google.auth.http.HttpCredentialsAdapter
 import rocks.jimi.busybee.config.CalendarConfig
 import kotlin.time.Instant
@@ -31,8 +35,8 @@ class GoogleCalendarClient(
     
     fun listEvents(timeMin: Instant, timeMax: Instant): List<GoogleEvent> {
         val events = service.events().list(config.calendarId)
-            .setTimeMin(com.google.api.client.util.DateTime(timeMin.toString()))
-            .setTimeMax(com.google.api.client.util.DateTime(timeMax.toString()))
+            .setTimeMin(DateTime(timeMin.toString()))
+            .setTimeMax(DateTime(timeMax.toString()))
             .setSingleEvents(true)
             .setMaxAttendees(2500)
             .execute()
@@ -60,15 +64,15 @@ class GoogleCalendarClient(
     }
     
     fun createEvent(summary: String, description: String?, start: Instant, end: Instant, visibility: String? = null): String {
-        val event = com.google.api.services.calendar.model.Event().apply {
+        val event = Event().apply {
             this.summary = summary
             this.description = description
             this.visibility = visibility
-            this.start = com.google.api.services.calendar.model.EventDateTime()
-                .setDateTime(com.google.api.client.util.DateTime(start.toString()))
-            this.end = com.google.api.services.calendar.model.EventDateTime()
-                .setDateTime(com.google.api.client.util.DateTime(end.toString()))
-            this.reminders = com.google.api.services.calendar.model.Event.Reminders()
+            this.start = EventDateTime()
+                .setDateTime(DateTime(start.toString()))
+            this.end = EventDateTime()
+                .setDateTime(DateTime(end.toString()))
+            this.reminders = Reminders()
                 .setUseDefault(false)
         }
         
@@ -81,11 +85,11 @@ class GoogleCalendarClient(
         event.summary = summary
         event.description = description
         event.visibility = visibility
-        event.start = com.google.api.services.calendar.model.EventDateTime()
-            .setDateTime(com.google.api.client.util.DateTime(start.toString()))
-        event.end = com.google.api.services.calendar.model.EventDateTime()
-            .setDateTime(com.google.api.client.util.DateTime(end.toString()))
-        event.reminders = com.google.api.services.calendar.model.Event.Reminders()
+        event.start = EventDateTime()
+            .setDateTime(DateTime(start.toString()))
+        event.end = EventDateTime()
+            .setDateTime(DateTime(end.toString()))
+        event.reminders = Reminders()
             .setUseDefault(false)
         
         service.events().update(config.calendarId, eventId, event).execute()

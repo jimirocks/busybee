@@ -1,6 +1,7 @@
 package rocks.jimi.busybee.cli
 
 import rocks.jimi.busybee.config.Config
+import rocks.jimi.busybee.config.SyncConfig
 
 class ConsoleUI {
 
@@ -88,7 +89,7 @@ class ConsoleUI {
         }
     }
 
-    fun displaySyncSettings(current: rocks.jimi.busybee.config.SyncConfig) {
+    fun displaySyncSettings(current: SyncConfig) {
         println("\n=== Configure Sync Settings ===")
         println("")
         println("Current: every ${current.intervalMinutes} minutes")
