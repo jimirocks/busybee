@@ -59,9 +59,20 @@ class CalDavClient(private val config: CalendarConfig) {
             .replace(".", "")
             .take(15) + "Z"
     }
+
+    private fun escapeICalString(value: String?): String {
+        return value
+            ?.replace("\\", "\\\\")
+            ?.replace(",", "\\,")
+            ?.replace(";", "\\;")
+            ?.replace("\n", "\\n")
+            ?: ""
+    }
     
     suspend fun createEvent(uid: String, summary: String, description: String?, start: Instant, end: Instant, visibility: String? = null): String {
         val classLine = if (visibility == "private") "CLASS:PRIVATE" else ""
+        val escapedSummary = escapeICalString(summary)
+        val escapedDescription = escapeICalString(description)
         val ics = buildString {
             appendLine("BEGIN:VCALENDAR")
             appendLine("VERSION:2.0")
@@ -69,27 +80,28 @@ class CalDavClient(private val config: CalendarConfig) {
             appendLine("BEGIN:VEVENT")
             appendLine("UID:$uid")
             appendLine("DTSTAMP:${formatICalInstant(Clock.System.now())}")
-            appendLine("SUMMARY:$summary")
-            appendLine("DESCRIPTION:$description")
+            appendLine("SUMMARY:$escapedSummary")
+            appendLine("DESCRIPTION:$escapedDescription")
             appendLine("DTSTART:${formatICalInstant(start)}")
             appendLine("DTEND:${formatICalInstant(end)}")
             if (classLine.isNotEmpty()) appendLine(classLine)
-            appendLine("BEGIN:VALARM")
-            appendLine("ACTION:NONE")
-            appendLine("END:VALARM")
             appendLine("END:VEVENT")
             appendLine("END:VCALENDAR")
         }
         
+        logger.debug { "Creating CalDAV event: uid=$uid, summary=$escapedSummary" }
+        
         val response = client.request("$baseUrl/$uid.ics") {
             method = HttpMethod("PUT")
             basicAuth(user, pass)
-            contentType(ContentType.Text.Any)
+            contentType(ContentType.parse("text/calendar; charset=utf-8"))
             setBody(ics)
         }
-        
+
         if (!response.status.isSuccess()) {
-            throw IllegalStateException("Failed to create CalDAV event: ${response.status}")
+            val responseBody = response.bodyAsText()
+            logger.error { "CalDAV create failed: status=${response.status}, body=$responseBody, ics=\n$ics" }
+            throw IllegalStateException("Failed to create CalDAV event: ${response.status} - $responseBody")
         }
         
         return uid
@@ -97,6 +109,8 @@ class CalDavClient(private val config: CalendarConfig) {
     
     suspend fun updateEvent(eventId: String, summary: String, description: String?, start: Instant, end: Instant, visibility: String? = null) {
         val classLine = if (visibility == "private") "CLASS:PRIVATE" else ""
+        val escapedSummary = escapeICalString(summary)
+        val escapedDescription = escapeICalString(description)
         val ics = buildString {
             appendLine("BEGIN:VCALENDAR")
             appendLine("VERSION:2.0")
@@ -104,23 +118,27 @@ class CalDavClient(private val config: CalendarConfig) {
             appendLine("BEGIN:VEVENT")
             appendLine("UID:$eventId")
             appendLine("DTSTAMP:${formatICalInstant(Clock.System.now())}")
-            appendLine("SUMMARY:$summary")
-            appendLine("DESCRIPTION:$description")
+            appendLine("SUMMARY:$escapedSummary")
+            appendLine("DESCRIPTION:$escapedDescription")
             appendLine("DTSTART:${formatICalInstant(start)}")
             appendLine("DTEND:${formatICalInstant(end)}")
             if (classLine.isNotEmpty()) appendLine(classLine)
-            appendLine("BEGIN:VALARM")
-            appendLine("ACTION:NONE")
-            appendLine("END:VALARM")
             appendLine("END:VEVENT")
             appendLine("END:VCALENDAR")
         }
         
-        client.request("$baseUrl/$eventId.ics") {
+        logger.debug { "Updating CalDAV event: eventId=$eventId, summary=$escapedSummary" }
+
+        val response = client.request("$baseUrl/$eventId.ics") {
             method = HttpMethod("PUT")
             basicAuth(user, pass)
-            contentType(ContentType.Text.Any)
+            contentType(ContentType.parse("text/calendar; charset=utf-8"))
             setBody(ics)
+        }
+
+        if (!response.status.isSuccess()) {
+            val responseBody = response.bodyAsText()
+            logger.error { "CalDAV update failed: status=${response.status}, body=$responseBody, ics=\n$ics" }
         }
     }
     
