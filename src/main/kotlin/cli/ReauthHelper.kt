@@ -17,14 +17,29 @@ object ReauthHelper {
     private val json = Json { prettyPrint = true }
     private val oauthHandler = OAuthHandler()
 
-    fun reauthorize(oauthConfig: OAuthConfig, calendars: List<CalendarConfig>): Boolean {
+    fun reauthorize(oauthConfig: OAuthConfig, calendars: List<CalendarConfig>, targetCalendarId: String? = null): Boolean {
         val googleCalendars = calendars.filter { it.type == "google" && it.tokenFile.isNotEmpty() }
         if (googleCalendars.isEmpty()) {
             println("No Google calendars configured. Cannot re-authenticate.")
             return false
         }
 
-        val tokenFiles = googleCalendars.map { File(it.tokenFile) }.toSet()
+        val targetCalendars = if (targetCalendarId != null) {
+            googleCalendars.filter { it.id == targetCalendarId }.ifEmpty {
+                println("Calendar with ID '$targetCalendarId' not found. Re-authenticating all Google calendars.")
+                googleCalendars
+            }
+        } else {
+            googleCalendars
+        }
+
+        val tokenFiles = targetCalendars.map { File(it.tokenFile) }.toSet()
+
+        if (targetCalendars.size == 1) {
+            println("Re-authenticating for calendar: ${targetCalendars.first().calendarId ?: targetCalendars.first().id}")
+        } else {
+            println("Re-authenticating ${targetCalendars.size} Google calendars...")
+        }
 
         println("Starting re-authentication with Google...")
         println()
@@ -81,7 +96,7 @@ object ReauthHelper {
         }
 
         if (success) {
-            println("\nRe-authentication successful!")
+            println("\nRe-authentication completed!")
         }
 
         return success

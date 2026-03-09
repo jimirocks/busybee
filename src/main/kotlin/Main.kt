@@ -35,7 +35,26 @@ class Sync : CliktCommand(name = "sync") {
         val config = ConfigLoader.load(configPath)
         
         echo("Running sync...")
-        val engine = SyncEngine(config, configPath)
+        
+        val engine = try {
+            SyncEngine(config, configPath)
+        } catch (e: InvalidTokenException) {
+            if (reauth && config.oauth != null) {
+                echo("Token missing for calendar '${e.calendarId}'. Re-authenticating...")
+                if (ReauthHelper.reauthorize(config.oauth, config.calendars, e.calendarId)) {
+                    echo("Running sync again...")
+                    SyncEngine(config, configPath)
+                } else {
+                    echo("Re-authentication failed. Please run 'busybee configure' to set up OAuth.", err = true)
+                    return
+                }
+            } else {
+                echo("Sync failed: ${e.message}", err = true)
+                echo("Run 'busybee sync --reauth' to re-authenticate with Google.", err = true)
+                return
+            }
+        }
+        
         val alertService = AlertService(config.alerts ?: AlertConfig())
         
         try {
@@ -44,7 +63,7 @@ class Sync : CliktCommand(name = "sync") {
         } catch (e: InvalidTokenException) {
             if (reauth && config.oauth != null) {
                 echo("Token expired for calendar '${e.calendarId}'. Re-authenticating...")
-                if (ReauthHelper.reauthorize(config.oauth, config.calendars)) {
+                if (ReauthHelper.reauthorize(config.oauth, config.calendars, e.calendarId)) {
                     echo("Running sync again...")
                     val newEngine = SyncEngine(config, configPath)
                     newEngine.runSync()
@@ -79,15 +98,17 @@ class RunDaemon : CliktCommand(name = "run") {
         val alertService = AlertService(config.alerts ?: AlertConfig())
         
         var needsReauth = reauth
+        var reauthCalendarId: String? = null
         
         val scheduler = Executors.newSingleThreadScheduledExecutor()
         scheduler.scheduleAtFixedRate({
             try {
                 if (needsReauth && config.oauth != null) {
                     echo("Re-authenticating with Google...")
-                    if (ReauthHelper.reauthorize(config.oauth, config.calendars)) {
+                    if (ReauthHelper.reauthorize(config.oauth, config.calendars, reauthCalendarId)) {
                         needsReauth = false
-                        echo("Re-authentication successful.")
+                        reauthCalendarId = null
+                        echo("Re-authentication completed.")
                     } else {
                         echo("Re-authentication failed.", err = true)
                         return@scheduleAtFixedRate
@@ -98,8 +119,9 @@ class RunDaemon : CliktCommand(name = "run") {
                 echo("Sync completed.")
             } catch (e: InvalidTokenException) {
                 if (config.oauth != null) {
-                    echo("Token expired. Will re-authenticate on next sync...", err = true)
+                    echo("Token expired for calendar '${e.calendarId}'. Will re-authenticate on next sync...", err = true)
                     needsReauth = true
+                    reauthCalendarId = e.calendarId
                 } else {
                     echo("Sync failed: ${e.message}", err = true)
                 }

@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import rocks.jimi.busybee.CalendarEvent
 import rocks.jimi.busybee.SyncState
 import rocks.jimi.busybee.api.CalDavClient
+import rocks.jimi.busybee.api.CalendarNotFoundException
 import rocks.jimi.busybee.api.GoogleCalendarClient
 import rocks.jimi.busybee.api.InvalidTokenException
 import rocks.jimi.busybee.api.TokenManager
@@ -147,8 +148,9 @@ class SyncEngine(private val config: Config, configPath: String) {
     
     private suspend fun fetchEvents(cfg: CalendarConfig, timeMin: Instant, timeMax: Instant): List<CalendarEvent> {
         val client = clients[cfg.id]!!
-        val events: List<CalendarEvent> = when (client) {
-            is GoogleCalendarClient -> safeGoogleCall { client.listEvents(timeMin, timeMax) }.map { e ->
+        val events: List<CalendarEvent> = try {
+            when (client) {
+                is GoogleCalendarClient -> safeGoogleCall { client.listEvents(timeMin, timeMax) }.map { e ->
                 val syncIdCandidate = e.description
                 val hasSyncId = isSyncIdPattern(syncIdCandidate)
                 CalendarEvent(
@@ -177,6 +179,10 @@ class SyncEngine(private val config: Config, configPath: String) {
                 )
             } ?: emptyList()
             else -> emptyList()
+        }
+        } catch (e: CalendarNotFoundException) {
+            logger.warn { "Calendar not found: ${e.calendarId}. Skipping this calendar." }
+            return emptyList()
         }
         return events
     }
@@ -208,6 +214,9 @@ class SyncEngine(private val config: Config, configPath: String) {
                     val calendarId = findCalendarIdForGoogleClient()
                     throw InvalidTokenException(calendarId, "Token expired or revoked for calendar '$calendarId'. Please re-authenticate with Google.")
                 }
+            } else if (e.statusCode == 404) {
+                val calendarId = findCalendarIdForGoogleClient()
+                throw CalendarNotFoundException(calendarId, "Calendar '$calendarId' not found. The user may have lost access to this calendar.")
             } else {
                 throw e
             }

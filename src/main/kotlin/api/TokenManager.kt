@@ -55,14 +55,14 @@ class TokenManager(private val config: CalendarConfig) {
     
     private fun loadTokenData(): TokenData {
         if (!tokenFile.exists()) {
-            throw IllegalStateException("Token file not found: ${tokenFile.absolutePath}")
+            throw InvalidTokenException(config.id, "Token file not found for calendar '${config.id}'. Please re-authenticate with Google.")
         }
         
         val content = tokenFile.readText()
         return try {
             json.decodeFromString<TokenData>(content)
         } catch (e: Exception) {
-            throw IllegalStateException("Invalid token file format: ${e.message}")
+            throw InvalidTokenException(config.id, "Invalid token file for calendar '${config.id}': ${e.message}")
         }
     }
 }
