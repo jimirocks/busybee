@@ -11,6 +11,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 class CalDavClient(private val config: CalendarConfig) {
@@ -160,6 +161,7 @@ class CalDavClient(private val config: CalendarConfig) {
         val statusPattern = "STATUS:([^\\r\\n]+)".toRegex()
         val dtstartPattern = "DTSTART(?:;TZID=([^:]+))?:([^\\s]+)".toRegex()
         val dtendPattern = "DTEND(?:;TZID=([^:]+))?:([^\\s]+)".toRegex()
+        val durationPattern = "DURATION:([^\\s]+)".toRegex()
         
         val icalBlocks = unfolded.split("BEGIN:VEVENT").drop(1)
         
@@ -173,22 +175,33 @@ class CalDavClient(private val config: CalendarConfig) {
             
             val dtstartMatch = dtstartPattern.find(block)
             val dtendMatch = dtendPattern.find(block)
+            val durationMatch = durationPattern.find(block)
             
-            if (dtstartMatch != null && dtendMatch != null) {
+            if (dtstartMatch != null) {
                 val tzid = dtstartMatch.groupValues.getOrNull(1)?.takeIf { it.isNotEmpty() }
                 val dtstartValue = dtstartMatch.groupValues.getOrNull(2)
-                val dtendValue = dtendMatch.groupValues.getOrNull(2)
                 
-                if (dtstartValue != null && dtendValue != null) {
+                if (dtstartValue != null) {
                     try {
                         val start = parseICalDateTime(dtstartValue, tzid)
-                        val end = parseICalDateTime(dtendValue, tzid)
+                        val end = when {
+                            dtendMatch != null -> {
+                                val dtendTzid = dtendMatch.groupValues.getOrNull(1)?.takeIf { it.isNotEmpty() }
+                                val dtendValue = dtendMatch.groupValues.getOrNull(2)
+                                if (dtendValue != null) parseICalDateTime(dtendValue, dtendTzid) else null
+                            }
+                            durationMatch != null -> {
+                                val durationStr = durationMatch.groupValues.getOrNull(1)
+                                if (durationStr != null) parseDuration(durationStr, start) else null
+                            }
+                            else -> null
+                        }
                         
-                        if (start < timeMax && end > timeMin) {
+                        if (end != null && start < timeMax && end > timeMin) {
                             events.add(CalDavEvent(uid, summary, description, start, end))
                         }
                     } catch (e: Exception) {
-                        logger.warn(e) { "Failed to parse CalDAV event: uid=$uid, dtstart=$dtstartValue, dtend=$dtendValue, tzid=$tzid" }
+                        logger.warn(e) { "Failed to parse CalDAV event: uid=$uid, dtstart=$dtstartValue, duration=${durationMatch?.groupValues?.getOrNull(1)}, tzid=$tzid" }
                     }
                 }
             }
@@ -213,6 +226,34 @@ class CalDavClient(private val config: CalendarConfig) {
         } else {
             localDateTime.toInstant(TimeZone.UTC)
         }
+    }
+    
+    private fun parseDuration(durationStr: String, start: Instant): Instant {
+        val cleaned = durationStr.removePrefix("P")
+        var weeks = 0
+        var days = 0
+        var hours = 0
+        var minutes = 0
+        var seconds = 0
+        
+        val hasTime = cleaned.contains("T")
+        val datePart = if (hasTime) cleaned.substringBefore("T") else cleaned
+        val timePart = if (hasTime) cleaned.substringAfter("T") else ""
+        
+        val weekMatch = Regex("(\\d+)W").find(datePart)
+        val dayMatch = Regex("(\\d+)D").find(datePart)
+        val hourMatch = Regex("(\\d+)H").find(timePart)
+        val minuteMatch = Regex("(\\d+)M").find(timePart)
+        val secondMatch = Regex("(\\d+)S").find(timePart)
+        
+        weeks = weekMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        days = dayMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        hours = hourMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        minutes = minuteMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        seconds = secondMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        
+        val totalSeconds = (weeks * 7 * 24 * 60 * 60) + (days * 24 * 60 * 60) + (hours * 60 * 60) + (minutes * 60) + seconds
+        return start + totalSeconds.seconds
     }
 }
 
